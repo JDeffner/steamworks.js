@@ -16,7 +16,7 @@ pub mod callback {
     impl Handle {
         #[napi]
         pub fn disconnect(&mut self) {
-            self.handle.take();
+            self.handle = None;
         }
     }
 
