@@ -2,21 +2,37 @@ use napi_derive::napi;
 
 #[napi]
 pub mod callback {
+    use std::{
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicU32, Ordering},
+            Mutex, OnceLock,
+        },
+    };
+
     use napi::{
         threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode},
         JsFunction,
     };
 
+    static HANDLE_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
+    static CALLBACK_REGISTRY: OnceLock<Mutex<HashMap<u32, steamworks::CallbackHandle>>> =
+        OnceLock::new();
+
+    fn get_registry() -> &'static Mutex<HashMap<u32, steamworks::CallbackHandle>> {
+        CALLBACK_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
     #[napi]
     pub struct Handle {
-        handle: Option<steamworks::CallbackHandle>,
+        id: u32,
     }
 
     #[napi]
     impl Handle {
         #[napi]
         pub fn disconnect(&mut self) {
-            self.handle = None;
+            get_registry().lock().unwrap().remove(&self.id);
         }
     }
 
@@ -77,9 +93,12 @@ pub mod callback {
             }
         };
 
-        Handle {
-            handle: Some(handle),
-        }
+        let id = HANDLE_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let registry = get_registry();
+        let mut map = registry.lock().unwrap();
+        map.insert(id, handle);
+
+        Handle { id }
     }
 
     fn register_callback<C>(
