@@ -317,7 +317,7 @@ dependencies = [
 [[package]]
 name = "steamworks"
 version = "0.12.1"
-source = "git+https://github.com/Noxime/steamworks-rs/?rev=d9ab145702f246019ad59658615547513a9558ee#d9ab145702f246019ad59658615547513a9558ee"
+source = "git+https://github.com/Noxime/steamworks-rs/?rev=40a457a61f5ef714d93804e51e0c5e3d405145a3#40a457a61f5ef714d93804e51e0c5e3d405145a3"
 dependencies = [
  "bitflags",
  "paste",
@@ -329,7 +329,7 @@ dependencies = [
 [[package]]
 name = "steamworks-sys"
 version = "0.12.0"
-source = "git+https://github.com/Noxime/steamworks-rs/?rev=d9ab145702f246019ad59658615547513a9558ee#d9ab145702f246019ad59658615547513a9558ee"
+source = "git+https://github.com/Noxime/steamworks-rs/?rev=40a457a61f5ef714d93804e51e0c5e3d405145a3#40a457a61f5ef714d93804e51e0c5e3d405145a3"
 
 [[package]]
 name = "steamworksjs"
