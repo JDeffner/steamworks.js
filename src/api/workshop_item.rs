@@ -281,31 +281,47 @@ pub mod workshop {
         pub num_children: u32,
         pub preview_url: Option<String>,
         pub statistics: WorkshopItemStatistic, // Is it necessary to design this as optional?
+        pub children: Option<Vec<BigInt>>,
     }
 
     impl WorkshopItem {
-        fn from_query_results(results: &steamworks::QueryResults, index: u32) -> Option<Self> {
-            results.get(index).map(|item| Self {
-                published_file_id: BigInt::from(item.published_file_id.0),
-                creator_app_id: item.creator_app_id.map(|id| id.0),
-                consumer_app_id: item.consumer_app_id.map(|id| id.0),
-                title: item.title,
-                description: item.description,
-                owner: PlayerSteamId::from_steamid(item.owner),
-                time_created: item.time_created,
-                time_updated: item.time_updated,
-                time_added_to_user_list: item.time_added_to_user_list,
-                visibility: item.visibility.into(),
-                banned: item.banned,
-                accepted_for_use: item.accepted_for_use,
-                tags: item.tags,
-                tags_truncated: item.tags_truncated,
-                url: item.url,
-                num_upvotes: item.num_upvotes,
-                num_downvotes: item.num_downvotes,
-                num_children: item.num_children,
-                preview_url: results.preview_url(index),
-                statistics: WorkshopItemStatistic::from_query_results(results, index),
+        fn from_query_results(
+            results: &steamworks::QueryResults,
+            index: u32,
+            return_children: bool,
+        ) -> Option<Self> {
+            results.get(index).map(|item| {
+                let children = if return_children {
+                    results
+                        .get_children(index)
+                        .map(|child_ids| child_ids.iter().map(|id| BigInt::from(id.0)).collect())
+                } else {
+                    None
+                };
+
+                Self {
+                    published_file_id: BigInt::from(item.published_file_id.0),
+                    creator_app_id: item.creator_app_id.map(|id| id.0),
+                    consumer_app_id: item.consumer_app_id.map(|id| id.0),
+                    title: item.title,
+                    description: item.description,
+                    owner: PlayerSteamId::from_steamid(item.owner),
+                    time_created: item.time_created,
+                    time_updated: item.time_updated,
+                    time_added_to_user_list: item.time_added_to_user_list,
+                    visibility: item.visibility.into(),
+                    banned: item.banned,
+                    accepted_for_use: item.accepted_for_use,
+                    tags: item.tags,
+                    tags_truncated: item.tags_truncated,
+                    url: item.url,
+                    num_upvotes: item.num_upvotes,
+                    num_downvotes: item.num_downvotes,
+                    num_children: item.num_children,
+                    preview_url: results.preview_url(index),
+                    statistics: WorkshopItemStatistic::from_query_results(results, index),
+                    children,
+                }
             })
         }
     }
@@ -320,10 +336,13 @@ pub mod workshop {
     }
 
     impl WorkshopPaginatedResult {
-        fn from_query_results(query_results: steamworks::QueryResults) -> Self {
+        fn from_query_results(
+            query_results: steamworks::QueryResults,
+            return_children: bool,
+        ) -> Self {
             Self {
                 items: (0..query_results.returned_results())
-                    .map(|i| WorkshopItem::from_query_results(&query_results, i))
+                    .map(|i| WorkshopItem::from_query_results(&query_results, i, return_children))
                     .collect(),
                 returned_results: query_results.returned_results(),
                 total_results: query_results.total_results(),
@@ -340,10 +359,13 @@ pub mod workshop {
     }
 
     impl WorkshopItemsResult {
-        fn from_query_results(query_results: steamworks::QueryResults) -> Self {
+        fn from_query_results(
+            query_results: steamworks::QueryResults,
+            return_children: bool,
+        ) -> Self {
             Self {
                 items: (0..query_results.returned_results())
-                    .map(|i| WorkshopItem::from_query_results(&query_results, i))
+                    .map(|i| WorkshopItem::from_query_results(&query_results, i, return_children))
                     .collect(),
                 was_cached: query_results.was_cached(),
             }
@@ -365,6 +387,7 @@ pub mod workshop {
         pub excluded_tags: Option<Vec<String>>,
         pub search_text: Option<String>,
         pub ranked_by_trend_days: Option<u32>,
+        pub return_children: Option<bool>,
     }
 
     #[derive(Debug)]
@@ -421,6 +444,9 @@ pub mod workshop {
             if let Some(ranked_by_trend_days) = query_config.ranked_by_trend_days {
                 query_handle = query_handle.set_ranked_by_trend_days(ranked_by_trend_days);
             }
+            if let Some(return_children) = query_config.return_children {
+                query_handle = query_handle.set_return_children(return_children);
+            }
         }
         query_handle
     }
@@ -433,6 +459,11 @@ pub mod workshop {
         let client = crate::client::get_client();
         let (tx, rx) = oneshot::channel();
 
+        let return_children = query_config
+            .as_ref()
+            .and_then(|c| c.return_children)
+            .unwrap_or(false);
+
         {
             let mut query_handle = client
                 .ugc()
@@ -441,11 +472,10 @@ pub mod workshop {
 
             query_handle = handle_query_config(query_handle, query_config);
 
-            query_handle.fetch(|fetch_result| {
-                tx.send(
-                    fetch_result
-                        .map(|query_results| WorkshopItem::from_query_results(&query_results, 0)),
-                )
+            query_handle.fetch(move |fetch_result| {
+                tx.send(fetch_result.map(|query_results| {
+                    WorkshopItem::from_query_results(&query_results, 0, return_children)
+                }))
                 .unwrap();
             });
         }
@@ -463,6 +493,11 @@ pub mod workshop {
         let client = crate::client::get_client();
         let (tx, rx) = oneshot::channel();
 
+        let return_children = query_config
+            .as_ref()
+            .and_then(|c| c.return_children)
+            .unwrap_or(false);
+
         {
             let mut query_handle = client
                 .ugc()
@@ -476,12 +511,10 @@ pub mod workshop {
 
             query_handle = handle_query_config(query_handle, query_config);
 
-            query_handle.fetch(|fetch_result| {
-                tx.send(
-                    fetch_result.map(|query_results| {
-                        WorkshopItemsResult::from_query_results(query_results)
-                    }),
-                )
+            query_handle.fetch(move |fetch_result| {
+                tx.send(fetch_result.map(|query_results| {
+                    WorkshopItemsResult::from_query_results(query_results, return_children)
+                }))
                 .unwrap();
             });
         }
@@ -503,6 +536,11 @@ pub mod workshop {
         let client = crate::client::get_client();
         let (tx, rx) = oneshot::channel();
 
+        let return_children = query_config
+            .as_ref()
+            .and_then(|c| c.return_children)
+            .unwrap_or(false);
+
         {
             // Start configuring the query for all items
             let mut query_handle = client
@@ -520,9 +558,9 @@ pub mod workshop {
 
             query_handle = handle_query_config(query_handle, query_config);
 
-            query_handle.fetch(|fetch_result| {
+            query_handle.fetch(move |fetch_result| {
                 tx.send(fetch_result.map(|query_results| {
-                    WorkshopPaginatedResult::from_query_results(query_results)
+                    WorkshopPaginatedResult::from_query_results(query_results, return_children)
                 }))
                 .unwrap();
             });
@@ -546,6 +584,11 @@ pub mod workshop {
         let client = crate::client::get_client();
         let (tx, rx) = oneshot::channel();
 
+        let return_children = query_config
+            .as_ref()
+            .and_then(|c| c.return_children)
+            .unwrap_or(false);
+
         {
             // Start configuring the query for user items
             let mut query_handle = client
@@ -565,9 +608,9 @@ pub mod workshop {
 
             query_handle = handle_query_config(query_handle, query_config);
 
-            query_handle.fetch(|fetch_result| {
+            query_handle.fetch(move |fetch_result| {
                 tx.send(fetch_result.map(|query_results| {
-                    WorkshopPaginatedResult::from_query_results(query_results)
+                    WorkshopPaginatedResult::from_query_results(query_results, return_children)
                 }))
                 .unwrap();
             });

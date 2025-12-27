@@ -453,6 +453,7 @@ export declare namespace workshop {
     numChildren: number
     previewUrl?: string
     statistics: WorkshopItemStatistic
+    children?: Array<bigint>
   }
   export interface WorkshopPaginatedResult {
     items: Array<WorkshopItem | undefined | null>
@@ -477,6 +478,7 @@ export declare namespace workshop {
     excludedTags?: Array<string>
     searchText?: string
     rankedByTrendDays?: number
+    returnChildren?: boolean
   }
   export interface AppIDs {
     creator?: number
