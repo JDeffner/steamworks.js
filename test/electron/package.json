@@ -5,8 +5,8 @@
         "steamworks.js": "../.."
     },
     "devDependencies": {
-        "electron": "24.2.0",
-        "electron-packager": "17.1.1"
+        "electron": "41.1.1",
+        "electron-packager": "17.1.2"
     },
     "main": "main.js",
     "scripts": {

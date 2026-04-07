@@ -2,10 +2,8 @@ use napi_derive::napi;
 
 #[napi]
 pub mod callback {
-    use napi::{
-        threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode},
-        JsFunction,
-    };
+    use crate::api::FatalTsfn;
+    use napi::threadsafe_function::ThreadsafeFunctionCallMode;
 
     #[napi]
     pub struct Handle {
@@ -39,12 +37,9 @@ pub mod callback {
     #[napi(ts_generic_types = "C extends keyof import('./callbacks').CallbackReturns")]
     pub fn register(
         #[napi(ts_arg_type = "C")] steam_callback: SteamCallback,
-        #[napi(ts_arg_type = "(value: import('./callbacks').CallbackReturns[C]) => void")] handler: JsFunction,
+        #[napi(ts_arg_type = "(value: import('./callbacks').CallbackReturns[C]) => void")] handler: FatalTsfn<serde_json::Value>,
     ) -> Handle {
-        let threadsafe_handler: ThreadsafeFunction<serde_json::Value, ErrorStrategy::Fatal> =
-            handler
-                .create_threadsafe_function(0, |ctx| Ok(vec![ctx.value]))
-                .unwrap();
+        let threadsafe_handler = handler;
 
         let handle = match steam_callback {
             SteamCallback::PersonaStateChange => {
@@ -85,7 +80,7 @@ pub mod callback {
     }
 
     fn register_callback<C>(
-        threadsafe_handler: ThreadsafeFunction<serde_json::Value, ErrorStrategy::Fatal>,
+        threadsafe_handler: FatalTsfn<serde_json::Value>,
     ) -> steamworks::CallbackHandle
     where
         C: steamworks::Callback + serde::Serialize,

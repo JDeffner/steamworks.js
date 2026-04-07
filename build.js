@@ -44,9 +44,10 @@ const params = [
     'build',
     '--platform',
     '--no-dts-header',
-    '--js', 'false',
+    '--no-js',
+    '--no-const-enum',
     '--dts', '../../client.d.ts',
-    relative,
+    '--output-dir', relative,
     process.argv.slice(2).join(' ')
 ]
 

@@ -18,15 +18,19 @@ pub mod matchmaking {
 
     #[napi]
     pub struct Lobby {
-        pub id: BigInt,
         lobby_id: LobbyId,
     }
 
     #[napi]
     impl Lobby {
+        #[napi(getter)]
+        pub fn id(&self) -> BigInt {
+            BigInt::from(self.lobby_id.raw())
+        }
+
         #[napi]
         pub async fn join(&self) -> Result<Lobby, Error> {
-            join_lobby(self.id.clone()).await
+            join_lobby(BigInt::from(self.lobby_id.raw())).await
         }
 
         #[napi]
@@ -152,10 +156,7 @@ pub mod matchmaking {
 
         rx.await
             .unwrap()
-            .map(|lobby_id| Lobby {
-                id: BigInt::from(lobby_id.raw()),
-                lobby_id,
-            })
+            .map(|lobby_id| Lobby { lobby_id })
             .map_err(|e| Error::from_reason(e.to_string()))
     }
 
@@ -174,10 +175,7 @@ pub mod matchmaking {
 
         rx.await
             .unwrap()
-            .map(|lobby_id| Lobby {
-                id: BigInt::from(lobby_id.raw()),
-                lobby_id,
-            })
+            .map(|lobby_id| Lobby { lobby_id })
             .map_err(|_| Error::from_reason("Failed to join lobby".to_string()))
     }
 
@@ -196,10 +194,7 @@ pub mod matchmaking {
             .map(|lobbies| {
                 lobbies
                     .iter()
-                    .map(|lobby_id| Lobby {
-                        id: BigInt::from(lobby_id.raw()),
-                        lobby_id: *lobby_id,
-                    })
+                    .map(|lobby_id| Lobby { lobby_id: *lobby_id })
                     .collect()
             })
             .map_err(|e| Error::from_reason(e.to_string()))

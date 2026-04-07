@@ -6,7 +6,7 @@ pub mod cloud {
     use std::io::Read;
     use std::io::Write;
 
-    #[napi]
+    #[napi(object)]
     pub struct FileInfo {
         pub name: String,
         pub size: BigInt,

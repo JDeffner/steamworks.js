@@ -2,9 +2,8 @@ use napi_derive::napi;
 
 #[napi]
 pub mod workshop {
+    use crate::api::FatalTsfn;
     use napi::bindgen_prelude::{BigInt, Error};
-    use napi::threadsafe_function::ErrorStrategy;
-    use napi::threadsafe_function::ThreadsafeFunction;
     use napi::threadsafe_function::ThreadsafeFunctionCallMode;
     use std::path::Path;
     use steamworks::{ClientManager, FileType, PublishedFileId, UpdateHandle};
@@ -206,23 +205,16 @@ pub mod workshop {
         update_details: UgcUpdate,
         app_id: Option<u32>,
 
-        #[napi(ts_arg_type = "(data: UgcResult) => void")] success_callback: napi::JsFunction,
+        #[napi(ts_arg_type = "(data: UgcResult) => void")] success_callback: FatalTsfn<UgcResult>,
 
-        #[napi(ts_arg_type = "(err: any) => void")] error_callback: napi::JsFunction,
+        #[napi(ts_arg_type = "(err: any) => void")] error_callback: FatalTsfn<Error>,
 
         #[napi(ts_arg_type = "(data: UpdateProgress) => void")] progress_callback: Option<
-            napi::JsFunction,
+            FatalTsfn<UpdateProgress>,
         >,
 
         progress_callback_interval_ms: Option<u32>,
     ) {
-        let success_callback: ThreadsafeFunction<UgcResult, ErrorStrategy::Fatal> =
-            success_callback
-                .create_threadsafe_function(0, |ctx| Ok(vec![ctx.value]))
-                .unwrap();
-        let error_callback: ThreadsafeFunction<Error, ErrorStrategy::Fatal> = error_callback
-            .create_threadsafe_function(0, |ctx| Ok(vec![ctx.value]))
-            .unwrap();
 
         let client = crate::client::get_client();
 
@@ -252,11 +244,6 @@ pub mod workshop {
             });
 
             if let Some(progress_callback) = progress_callback {
-                let progress_callback: ThreadsafeFunction<UpdateProgress, ErrorStrategy::Fatal> =
-                    progress_callback
-                        .create_threadsafe_function(0, |ctx| Ok(vec![ctx.value]))
-                        .unwrap();
-
                 std::thread::spawn(move || loop {
                     let (status, progress, total) = update_watch_handle.progress();
                     let value = UpdateProgress {
