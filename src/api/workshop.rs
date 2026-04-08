@@ -9,6 +9,10 @@ pub mod workshop {
     use steamworks::{ClientManager, FileType, PublishedFileId, UpdateHandle};
     use tokio::sync::oneshot;
 
+    fn pfid(b: BigInt) -> PublishedFileId {
+        PublishedFileId(b.get_u64().1)
+    }
+
     #[napi(object)]
     pub struct UgcResult {
         pub item_id: BigInt,
@@ -157,7 +161,7 @@ pub mod workshop {
         {
             let update_handle = client
                 .ugc()
-                .start_item_update(app_id, PublishedFileId(item_id.get_u64().1));
+                .start_item_update(app_id, pfid(item_id));
 
             update_details.submit(update_handle, |result| {
                 tx.send(result).unwrap();
@@ -200,7 +204,7 @@ pub mod workshop {
         {
             let update_handle = client
                 .ugc()
-                .start_item_update(app_id, PublishedFileId(item_id.get_u64().1));
+                .start_item_update(app_id, pfid(item_id));
 
             let update_watch_handle = update_details.submit(update_handle, move |result| {
                 match result {
@@ -250,7 +254,7 @@ pub mod workshop {
 
         client
             .ugc()
-            .subscribe_item(PublishedFileId(item_id.get_u64().1), |result| {
+            .subscribe_item(pfid(item_id), |result| {
                 tx.send(result).unwrap();
             });
 
@@ -271,7 +275,7 @@ pub mod workshop {
 
         client
             .ugc()
-            .unsubscribe_item(PublishedFileId(item_id.get_u64().1), |result| {
+            .unsubscribe_item(pfid(item_id), |result| {
                 tx.send(result).unwrap();
             });
 
@@ -294,7 +298,7 @@ pub mod workshop {
         let client = crate::client::get_client();
         let result = client
             .ugc()
-            .item_state(PublishedFileId(item_id.get_u64().1));
+            .item_state(pfid(item_id));
 
         result.bits()
     }
@@ -309,7 +313,7 @@ pub mod workshop {
         let client = crate::client::get_client();
         let result = client
             .ugc()
-            .item_install_info(PublishedFileId(item_id.get_u64().1));
+            .item_install_info(pfid(item_id));
 
         result.map(|install_info| InstallInfo {
             folder: install_info.folder,
@@ -328,7 +332,7 @@ pub mod workshop {
         let client = crate::client::get_client();
         let result = client
             .ugc()
-            .item_download_info(PublishedFileId(item_id.get_u64().1));
+            .item_download_info(pfid(item_id));
 
         result.map(|download_info| DownloadInfo {
             current: BigInt::from(download_info.0),
@@ -347,7 +351,7 @@ pub mod workshop {
         let client = crate::client::get_client();
         client
             .ugc()
-            .download_item(PublishedFileId(item_id.get_u64().1), high_priority)
+            .download_item(pfid(item_id), high_priority)
     }
 
     /// Get all subscribed workshop items.
@@ -372,7 +376,7 @@ pub mod workshop {
     
         client
             .ugc()
-            .delete_item(PublishedFileId(item_id.get_u64().1), |result| {
+            .delete_item(pfid(item_id), |result| {
                 tx.send(result).unwrap();
             });
     
