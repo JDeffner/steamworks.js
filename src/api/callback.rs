@@ -4,7 +4,6 @@ use napi_derive::napi;
 pub mod callback {
     use crate::api::FatalTsfn;
     use napi::threadsafe_function::ThreadsafeFunctionCallMode;
-    use napi_derive::napi;
 
     #[napi]
     pub struct Handle {
@@ -15,42 +14,12 @@ pub mod callback {
     impl Handle {
         #[napi]
         pub fn disconnect(&mut self) {
-            if let Some(handle) = self.handle.take() {
-                handle.disconnect();
-            }
+            self.handle.take();
         }
     }
 
-    macro_rules! steam_callbacks {
-        ($($variant:ident),* $(,)?) => {
-            #[napi]
-            pub enum SteamCallback {
-                $($variant),*
-            }
-
-            #[napi(ts_generic_types = "C extends keyof import('./callbacks').CallbackReturns")]
-            pub fn register(
-                #[napi(ts_arg_type = "C")] steam_callback: SteamCallback,
-                #[napi(ts_arg_type = "(value: import('./callbacks').CallbackReturns[C]) => void")] handler: FatalTsfn<serde_json::Value>,
-            ) -> Handle {
-                let threadsafe_handler = handler;
-
-                let handle = match steam_callback {
-                    $(
-                        SteamCallback::$variant => {
-                            register_callback::<steamworks::$variant>(threadsafe_handler)
-                        }
-                    )*
-                };
-
-                Handle {
-                    handle: Some(handle),
-                }
-            }
-        };
-    }
-
-    steam_callbacks!(
+    #[napi]
+    pub enum SteamCallback {
         PersonaStateChange,
         SteamServersConnected,
         SteamServersDisconnected,
@@ -61,7 +30,44 @@ pub mod callback {
         P2PSessionConnectFail,
         GameLobbyJoinRequested,
         MicroTxnAuthorizationResponse,
-    );
+    }
+
+    macro_rules! register_callbacks {
+        ($steam_callback:expr, $handler:expr, $($variant:ident),* $(,)?) => {
+            match $steam_callback {
+                $(
+                    SteamCallback::$variant => {
+                        register_callback::<steamworks::$variant>($handler)
+                    }
+                )*
+            }
+        };
+    }
+
+    #[napi(ts_generic_types = "C extends keyof import('./callbacks').CallbackReturns")]
+    pub fn register(
+        #[napi(ts_arg_type = "C")] steam_callback: SteamCallback,
+        #[napi(ts_arg_type = "(value: import('./callbacks').CallbackReturns[C]) => void")] handler: FatalTsfn<serde_json::Value>,
+    ) -> Handle {
+        let handle = register_callbacks!(
+            steam_callback,
+            handler,
+            PersonaStateChange,
+            SteamServersConnected,
+            SteamServersDisconnected,
+            SteamServerConnectFailure,
+            LobbyDataUpdate,
+            LobbyChatUpdate,
+            P2PSessionRequest,
+            P2PSessionConnectFail,
+            GameLobbyJoinRequested,
+            MicroTxnAuthorizationResponse,
+        );
+
+        Handle {
+            handle: Some(handle),
+        }
+    }
 
     fn register_callback<C>(
         threadsafe_handler: FatalTsfn<serde_json::Value>,

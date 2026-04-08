@@ -134,8 +134,7 @@ pub mod matchmaking {
         pub fn merge_full_data(&self, data: HashMap<String, String>) -> bool {
             let matchmaking = crate::client::get_client().matchmaking();
             data.iter()
-                .map(|(key, value)| matchmaking.set_lobby_data(self.lobby_id, key, value))
-                .all(|x| x)
+                .all(|(key, value)| matchmaking.set_lobby_data(self.lobby_id, key, value))
         }
     }
 
@@ -145,13 +144,11 @@ pub mod matchmaking {
 
         let (tx, rx) = oneshot::channel();
 
-        client.matchmaking().create_lobby(
-            lobby_type.into(),
-            max_members,
-            |result| {
+        client
+            .matchmaking()
+            .create_lobby(lobby_type.into(), max_members, |result| {
                 tx.send(result).unwrap();
-            },
-        );
+            });
 
         rx.await
             .unwrap()
@@ -193,7 +190,9 @@ pub mod matchmaking {
             .map(|lobbies| {
                 lobbies
                     .iter()
-                    .map(|lobby_id| Lobby { lobby_id: *lobby_id })
+                    .map(|lobby_id| Lobby {
+                        lobby_id: *lobby_id,
+                    })
                     .collect()
             })
             .map_err(|e| Error::from_reason(e.to_string()))

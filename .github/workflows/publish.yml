@@ -14,7 +14,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
             - name: Setup Rust
               uses: dtolnay/rust-toolchain@stable
@@ -35,12 +35,12 @@ jobs:
             image: ubuntu:20.04
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
-                  node-version: 22.x
+                  node-version: 24.x
 
             # ubuntu:20.04 does not have curl and gcc/g++ installed by default
             - run: apt-get update && apt-get install -y curl build-essential
@@ -75,12 +75,12 @@ jobs:
         runs-on: macos-latest
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
-                  node-version: 22.x
+                  node-version: 24.x
 
             - name: Setup Rust
               uses: dtolnay/rust-toolchain@stable
@@ -114,10 +114,10 @@ jobs:
         needs: [build, build-mac]
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
             - name: Download build
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   path: dist/
                   pattern: binaries-*
@@ -128,7 +128,8 @@ jobs:
                   echo "- Root directory:" && ls
                   echo "- Dist directory:" && ls -R dist
 
-            - name: Publish to npm
-              uses: JS-DevTools/npm-publish@v1
-              with:
-                  token: ${{ secrets.NPM_TOKEN }}
+            # TODO: NPM doesn't support this anymore
+            # - name: Publish to npm
+            #   uses: JS-DevTools/npm-publish@v1
+            #   with:
+            #       token: ${{ secrets.NPM_TOKEN }}

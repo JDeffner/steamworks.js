@@ -73,5 +73,6 @@ module.exports.electronEnableSteamOverlay = (disableEachFrameInvalidation) => {
     }
 }
 
+/** @type {typeof import('./client.d').callback.SteamCallback} */
 const SteamCallback = nativeBinding.callback.SteamCallback
 module.exports.SteamCallback = SteamCallback
