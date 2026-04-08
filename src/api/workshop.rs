@@ -24,27 +24,12 @@ pub mod workshop {
         Unlisted,
     }
 
-    impl From<steamworks::PublishedFileVisibility> for UgcItemVisibility {
-        fn from(visibility: steamworks::PublishedFileVisibility) -> Self {
-            match visibility {
-                steamworks::PublishedFileVisibility::Public => UgcItemVisibility::Public,
-                steamworks::PublishedFileVisibility::FriendsOnly => UgcItemVisibility::FriendsOnly,
-                steamworks::PublishedFileVisibility::Private => UgcItemVisibility::Private,
-                steamworks::PublishedFileVisibility::Unlisted => UgcItemVisibility::Unlisted,
-            }
-        }
-    }
-
-    impl From<UgcItemVisibility> for steamworks::PublishedFileVisibility {
-        fn from(val: UgcItemVisibility) -> Self {
-            match val {
-                UgcItemVisibility::Public => steamworks::PublishedFileVisibility::Public,
-                UgcItemVisibility::FriendsOnly => steamworks::PublishedFileVisibility::FriendsOnly,
-                UgcItemVisibility::Private => steamworks::PublishedFileVisibility::Private,
-                UgcItemVisibility::Unlisted => steamworks::PublishedFileVisibility::Unlisted,
-            }
-        }
-    }
+    crate::api::impl_enum_from!(steamworks::PublishedFileVisibility => UgcItemVisibility {
+        Public, FriendsOnly, Private, Unlisted,
+    });
+    crate::api::impl_enum_from!(UgcItemVisibility => steamworks::PublishedFileVisibility {
+        Public, FriendsOnly, Private, Unlisted,
+    });
 
     #[napi(object)]
     pub struct UgcUpdate {
@@ -118,20 +103,10 @@ pub mod workshop {
         CommittingChanges,
     }
 
-    impl From<steamworks::UpdateStatus> for UpdateStatus {
-        fn from(visibility: steamworks::UpdateStatus) -> Self {
-            match visibility {
-                steamworks::UpdateStatus::Invalid => UpdateStatus::Invalid,
-                steamworks::UpdateStatus::PreparingConfig => UpdateStatus::PreparingConfig,
-                steamworks::UpdateStatus::PreparingContent => UpdateStatus::PreparingContent,
-                steamworks::UpdateStatus::UploadingContent => UpdateStatus::UploadingContent,
-                steamworks::UpdateStatus::UploadingPreviewFile => {
-                    UpdateStatus::UploadingPreviewFile
-                }
-                steamworks::UpdateStatus::CommittingChanges => UpdateStatus::CommittingChanges,
-            }
-        }
-    }
+    crate::api::impl_enum_from!(steamworks::UpdateStatus => UpdateStatus {
+        Invalid, PreparingConfig, PreparingContent,
+        UploadingContent, UploadingPreviewFile, CommittingChanges,
+    });
 
     #[napi(object)]
     pub struct UpdateProgress {
@@ -336,14 +311,11 @@ pub mod workshop {
             .ugc()
             .item_install_info(PublishedFileId(item_id.get_u64().1));
 
-        match result {
-            Some(install_info) => Some(InstallInfo {
-                folder: install_info.folder,
-                size_on_disk: BigInt::from(install_info.size_on_disk),
-                timestamp: install_info.timestamp,
-            }),
-            None => None,
-        }
+        result.map(|install_info| InstallInfo {
+            folder: install_info.folder,
+            size_on_disk: BigInt::from(install_info.size_on_disk),
+            timestamp: install_info.timestamp,
+        })
     }
 
     /// Get info about a pending download of a workshop item.

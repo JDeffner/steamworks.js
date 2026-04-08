@@ -16,6 +16,10 @@ pub mod matchmaking {
         Invisible,
     }
 
+    crate::api::impl_enum_from!(LobbyType => steamworks::LobbyType {
+        Private, FriendsOnly, Public, Invisible,
+    });
+
     #[napi]
     pub struct Lobby {
         lobby_id: LobbyId,
@@ -142,12 +146,7 @@ pub mod matchmaking {
         let (tx, rx) = oneshot::channel();
 
         client.matchmaking().create_lobby(
-            match lobby_type {
-                LobbyType::Private => steamworks::LobbyType::Private,
-                LobbyType::FriendsOnly => steamworks::LobbyType::FriendsOnly,
-                LobbyType::Public => steamworks::LobbyType::Public,
-                LobbyType::Invisible => steamworks::LobbyType::Invisible,
-            },
+            lobby_type.into(),
             max_members,
             |result| {
                 tx.send(result).unwrap();

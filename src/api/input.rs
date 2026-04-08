@@ -23,27 +23,23 @@ pub mod input {
         SteamDeckController,
     }
 
-    impl From<steamworks::InputType> for InputType {
-        fn from(input_type: steamworks::InputType) -> InputType {
-            match input_type {
-                steamworks::InputType::Unknown => InputType::Unknown,
-                steamworks::InputType::SteamController => InputType::SteamController,
-                steamworks::InputType::XBox360Controller => InputType::XBox360Controller,
-                steamworks::InputType::XBoxOneController => InputType::XBoxOneController,
-                steamworks::InputType::GenericGamepad => InputType::GenericGamepad,
-                steamworks::InputType::PS4Controller => InputType::PS4Controller,
-                steamworks::InputType::AppleMFiController => InputType::AppleMFiController,
-                steamworks::InputType::AndroidController => InputType::AndroidController,
-                steamworks::InputType::SwitchJoyConPair => InputType::SwitchJoyConPair,
-                steamworks::InputType::SwitchJoyConSingle => InputType::SwitchJoyConSingle,
-                steamworks::InputType::SwitchProController => InputType::SwitchProController,
-                steamworks::InputType::MobileTouch => InputType::MobileTouch,
-                steamworks::InputType::PS3Controller => InputType::PS3Controller,
-                steamworks::InputType::PS5Controller => InputType::PS5Controller,
-                steamworks::InputType::SteamDeckController => InputType::SteamDeckController,
-            }
-        }
-    }
+    crate::api::impl_enum_from!(steamworks::InputType => InputType {
+        Unknown,
+        SteamController,
+        XBox360Controller,
+        XBoxOneController,
+        GenericGamepad,
+        PS4Controller,
+        AppleMFiController,
+        AndroidController,
+        SwitchJoyConPair,
+        SwitchJoyConSingle,
+        SwitchProController,
+        MobileTouch,
+        PS3Controller,
+        PS5Controller,
+        SteamDeckController,
+    });
 
     #[napi]
     pub struct Controller {
