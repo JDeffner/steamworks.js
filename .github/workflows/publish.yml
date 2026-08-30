@@ -2,7 +2,7 @@ name: Publish
 
 on:
     push:
-        branches: [main, community-edition]
+        branches: [main]
         tags:
             - 'v*'
     pull_request:
