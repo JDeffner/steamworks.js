@@ -377,9 +377,93 @@ export declare namespace matchmaking {
     Public = 2,
     Invisible = 3
   }
+  /**
+   * Comparison used by a string lobby list filter.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyComparison
+   */
+  export const enum LobbyStringComparison {
+    EqualToOrLessThan = 0,
+    LessThan = 1,
+    Equal = 2,
+    GreaterThan = 3,
+    EqualToOrGreaterThan = 4,
+    NotEqual = 5
+  }
+  /**
+   * Comparison used by a numerical lobby list filter.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyComparison
+   */
+  export const enum LobbyNumberComparison {
+    Equal = 0,
+    NotEqual = 1,
+    GreaterThan = 2,
+    GreaterThanEqualTo = 3,
+    LessThan = 4,
+    LessThanEqualTo = 5
+  }
+  /**
+   * How far geographically the returned lobbies may be.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyDistanceFilter
+   */
+  export const enum LobbyDistanceFilter {
+    Close = 0,
+    Default = 1,
+    Far = 2,
+    Worldwide = 3
+  }
+  /**
+   * Matches lobbies whose string metadata compares against `value` as requested.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListStringFilter
+   */
+  export interface LobbyStringFilter {
+    key: string
+    value: string
+    comparison: LobbyStringComparison
+  }
+  /**
+   * Matches lobbies whose numerical metadata compares against `value` as requested.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListNumericalFilter
+   */
+  export interface LobbyNumberFilter {
+    key: string
+    value: number
+    comparison: LobbyNumberComparison
+  }
+  /**
+   * Sorts the results by how close their metadata is to `value`. This does not filter anything out.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListNearValueFilter
+   */
+  export interface LobbyNearFilter {
+    key: string
+    value: number
+  }
+  /**
+   * Filters applied to a lobby list request. Every field is optional; an empty
+   * filter returns the same lobbies as an unfiltered request.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
+   */
+  export interface LobbyListFilter {
+    /** String metadata comparisons a lobby has to satisfy */
+    stringFilters?: Array<LobbyStringFilter>
+    /** Numerical metadata comparisons a lobby has to satisfy */
+    numberFilters?: Array<LobbyNumberFilter>
+    /** Metadata values the results are sorted closest to */
+    nearValueFilters?: Array<LobbyNearFilter>
+    /** Only return lobbies with at least this many open slots (0-255) */
+    slotsAvailable?: number
+    /** How far geographically the returned lobbies may be */
+    distance?: LobbyDistanceFilter
+    /** Maximum amount of lobbies to return */
+    count?: number
+  }
   export function createLobby(lobbyType: LobbyType, maxMembers: number): Promise<Lobby>
   export function joinLobby(lobbyId: bigint): Promise<Lobby>
-  export function getLobbies(): Promise<Array<Lobby>>
+  /**
+   * Get the list of lobbies for this app, optionally narrowed down by `filter`.
+   * Calling this without a filter returns the unfiltered lobby list.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
+   */
+  export function getLobbies(filter?: LobbyListFilter | undefined | null): Promise<Array<Lobby>>
   export class Lobby {
     id: bigint
     join(): Promise<Lobby>
