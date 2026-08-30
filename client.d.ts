@@ -301,6 +301,7 @@ export declare namespace workshop {
     SteamVideo = 14,
     GameManagedItem = 15
   }
+  /** Create a new workshop item. `fileType` defaults to `Community` when not provided. */
   export function createItem(appId?: number | undefined | null, fileType?: FileType | undefined | null): Promise<UgcResult>
   export function updateItem(itemId: bigint, updateDetails: UgcUpdate, appId?: number | undefined | null): Promise<UgcResult>
   export function updateItemWithCallback(itemId: bigint, updateDetails: UgcUpdate, appId: number | undefined | null, successCallback: (data: UgcResult) => void, errorCallback: (err: any) => void, progressCallback?: (data: UpdateProgress) => void, progressCallbackIntervalMs?: number | undefined | null): void

@@ -184,6 +184,7 @@ pub mod workshop {
         }
     }
 
+    /// Create a new workshop item. `fileType` defaults to `Community` when not provided.
     #[napi]
     pub async fn create_item(
         app_id: Option<u32>,
