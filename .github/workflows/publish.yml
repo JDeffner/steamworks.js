@@ -115,10 +115,12 @@ jobs:
         runs-on: ubuntu-latest
         needs: [build, build-mac]
 
-        # id-token lets npm attach provenance attestations
+        # id-token lets npm attach provenance attestations,
+        # packages lets GITHUB_TOKEN publish to GitHub Packages
         permissions:
             contents: read
             id-token: write
+            packages: write
 
         steps:
             - uses: actions/checkout@v4
@@ -141,6 +143,22 @@ jobs:
                   echo "- Dist directory:" && ls -R dist
 
             - name: Publish to npm
-              run: npm publish --access public --provenance
+              run: |
+                  if [ -z "$NODE_AUTH_TOKEN" ]; then
+                      echo "NPM_TOKEN secret is not set, skipping npmjs.org publish"
+                  else
+                      npm publish --access public --provenance
+                  fi
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Setup Node for GitHub Packages
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22.x
+                  registry-url: 'https://npm.pkg.github.com'
+
+            - name: Publish to GitHub Packages
+              run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

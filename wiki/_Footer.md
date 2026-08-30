@@ -1,0 +1,1 @@
+steamworks.js community edition — install with `npm i steamworks.js@npm:@jdeffner/steamworks.js`. This wiki is generated from the [`wiki/` directory](https://github.com/JDeffner/steamworks.js/tree/main/wiki); edits belong there, not here.

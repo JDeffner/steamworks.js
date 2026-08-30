@@ -35,11 +35,10 @@ pub mod achievement {
     }
 
     #[napi]
-    pub fn names() -> Vec<String> {
+    pub fn names() -> Result<Vec<String>, napi::bindgen_prelude::Error> {
         let client = crate::client::get_client();
-        client
-            .user_stats()
-            .get_achievement_names()
-            .expect("Failed to get achievement names")
+        client.user_stats().get_achievement_names().ok_or_else(|| {
+            napi::bindgen_prelude::Error::from_reason("Failed to get achievement names")
+        })
     }
 }

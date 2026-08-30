@@ -7,7 +7,7 @@ pub mod workshop {
     use tokio::sync::oneshot;
 
     use crate::api::localplayer::PlayerSteamId;
-    use crate::api::workshop::workshop::UgcItemVisibility;
+    use crate::api::workshop::workshop::{KeyValueTag, UgcItemVisibility};
 
     #[napi]
     pub enum UGCQueryType {
@@ -282,6 +282,16 @@ pub mod workshop {
         pub preview_url: Option<String>,
         pub statistics: WorkshopItemStatistic, // Is it necessary to design this as optional?
         pub children: Option<Vec<BigInt>>,
+        /// Key/value tags of the item. Only returned when the query was configured with
+        /// `includeKeyValueTags`, and absent when the item has none.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#GetQueryUGCKeyValueTag}
+        pub key_value_tags: Option<Vec<KeyValueTag>>,
+        /// Developer-defined metadata of the item. Only returned when the query was configured
+        /// with `includeMetadata`, and absent when the item has none.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#GetQueryUGCMetadata}
+        pub metadata: Option<String>,
     }
 
     impl WorkshopItem {
@@ -298,6 +308,23 @@ pub mod workshop {
                 } else {
                     None
                 };
+
+                let key_value_tags: Vec<KeyValueTag> = (0..results.key_value_tags(index))
+                    .filter_map(|kv_index| {
+                        results
+                            .get_key_value_tag(index, kv_index)
+                            .map(|(key, value)| KeyValueTag { key, value })
+                    })
+                    .collect();
+
+                let metadata = results.get_metadata(index).and_then(|metadata| {
+                    let metadata = String::from_utf8_lossy(&metadata).into_owned();
+                    if metadata.is_empty() {
+                        None
+                    } else {
+                        Some(metadata)
+                    }
+                });
 
                 Self {
                     published_file_id: BigInt::from(item.published_file_id.0),
@@ -321,6 +348,12 @@ pub mod workshop {
                     preview_url: results.preview_url(index),
                     statistics: WorkshopItemStatistic::from_query_results(results, index),
                     children,
+                    key_value_tags: if key_value_tags.is_empty() {
+                        None
+                    } else {
+                        Some(key_value_tags)
+                    },
+                    metadata,
                 }
             })
         }
@@ -388,6 +421,18 @@ pub mod workshop {
         pub search_text: Option<String>,
         pub ranked_by_trend_days: Option<u32>,
         pub return_children: Option<bool>,
+        /// Return each item's key/value tags, readable as `keyValueTags` on the results.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetReturnKeyValueTags}
+        pub include_key_value_tags: Option<bool>,
+        /// Only return items whose cloud file name matches this filter.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetCloudFileNameFilter}
+        pub cloud_file_name_filter: Option<String>,
+        /// Key/value tags that must all be present on the returned items.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddRequiredKeyValueTag}
+        pub required_key_value_tags: Option<Vec<KeyValueTag>>,
     }
 
     #[derive(Debug)]
@@ -446,6 +491,17 @@ pub mod workshop {
             }
             if let Some(return_children) = query_config.return_children {
                 query_handle = query_handle.set_return_children(return_children);
+            }
+            if let Some(include_key_value_tags) = query_config.include_key_value_tags {
+                query_handle = query_handle.set_return_key_value_tags(include_key_value_tags);
+            }
+            if let Some(cloud_file_name_filter) = query_config.cloud_file_name_filter {
+                query_handle = query_handle.set_cloud_file_name_filter(&cloud_file_name_filter);
+            }
+            if let Some(required_key_value_tags) = query_config.required_key_value_tags {
+                for tag in required_key_value_tags {
+                    query_handle = query_handle.add_required_key_value_tag(&tag.key, &tag.value);
+                }
             }
         }
         query_handle

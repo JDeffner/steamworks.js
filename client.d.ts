@@ -35,7 +35,7 @@ export declare namespace auth {
    */
   export function getSessionTicketWithSteamId(steamId64: bigint, timeoutSeconds?: number | undefined | null): Promise<Ticket>
   /**
-   * @param ip - The string of IPv4 or IPv6 address. Use as NetworkIdentity of the remote system that will authenticate the ticket.
+   * @param ip - The IPv4 or IPv6 socket address string, including the port (e.g. "203.0.113.10:27015" or "[::1]:27015"). Use as NetworkIdentity of the remote system that will authenticate the ticket.
    * @param timeoutSeconds - The number of seconds to wait for the ticket to be validated. Default value is 10 seconds.
    */
   export function getSessionTicketWithIp(ip: string, timeoutSeconds?: number | undefined | null): Promise<Ticket>
@@ -79,6 +79,115 @@ export declare namespace cloud {
     size: bigint
   }
 }
+export declare namespace friends {
+  /**
+   * Flags to filter the friends list by relationship.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#EFriendFlags)
+   */
+  export const enum FriendFlags {
+    None = 0,
+    Blocked = 1,
+    FriendshipRequested = 2,
+    /** The usual friends list. */
+    Immediate = 4,
+    ClanMember = 8,
+    OnGameServer = 16,
+    RequestingFriendship = 128,
+    RequestingInfo = 256,
+    Ignored = 512,
+    IgnoredFriend = 1024,
+    ChatMember = 4096,
+    All = 65535
+  }
+  /**
+   * The online state of a user.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#EPersonaState)
+   */
+  export const enum FriendState {
+    Offline = 0,
+    Online = 1,
+    Busy = 2,
+    Away = 3,
+    Snooze = 4,
+    LookingToTrade = 5,
+    LookingToPlay = 6,
+    Invisible = 7
+  }
+  /**
+   * Information about the game a user is currently playing.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetFriendGamePlayed)
+   */
+  export interface FriendGame {
+    /** The id of the game being played. */
+    gameId: bigint
+    /** The app id of the game being played. */
+    appId: number
+    /** The IPv4 address of the server the player is on, "0.0.0.0" if none. */
+    gameAddress: string
+    /** The game port of the server the player is on, 0 if none. */
+    gamePort: number
+    /** The query port of the server the player is on, 0 if none. */
+    queryPort: number
+    /** The id of the lobby the player is in, 0 if none. */
+    lobbyId: bigint
+  }
+  /**
+   * Get the users matching the given relationship, the regular friends list by default.
+   * `flags` is a bitmask of `FriendFlags` values, which may be OR-ed together.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetFriendByIndex)
+   */
+  export function getFriends(flags?: number | undefined | null): Array<Friend>
+  /**
+   * Get the users on the local user's recently-played-with list.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetCoplayFriend)
+   */
+  export function getCoplayFriends(): Array<Friend>
+  /** Get an arbitrary user by steam id, they don't have to be a friend. */
+  export function getFriend(steamId64: bigint): Friend
+  /**
+   * Request the persona name and optionally the avatar of a user from Steam.
+   * @param nameOnly - Only request the name, skipping the avatar.
+   * @returns true if the information is being fetched, false if it was already available.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#RequestUserInformation)
+   */
+  export function requestUserInformation(steamId64: bigint, nameOnly: boolean): boolean
+  /**
+   * A Steam user, as seen through the friends interface.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends)
+   */
+  export class Friend {
+    /** The steam id of this user. */
+    getSteamId(): PlayerSteamId
+    /** The current display (persona) name of this user. */
+    getName(): string
+    /** The nickname the local user has set for this user, if any. */
+    getNickName(): string | null
+    /** The online state of this user. */
+    getState(): FriendState
+    /** Information about the game this user is currently playing, if any. */
+    getGamePlayed(): FriendGame | null
+    /**
+     * Whether this user matches the given relationship criteria.
+     * `flags` is a bitmask of `FriendFlags` values, which may be OR-ed together.
+     */
+    hasFriend(flags: number): boolean
+    /**
+     * The small avatar of this user as raw RGBA bytes, 32x32 pixels (4096 bytes).
+     * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
+     */
+    smallAvatar(): Buffer | null
+    /**
+     * The medium avatar of this user as raw RGBA bytes, 64x64 pixels (16384 bytes).
+     * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
+     */
+    mediumAvatar(): Buffer | null
+    /**
+     * The large avatar of this user as raw RGBA bytes, 184x184 pixels (135424 bytes).
+     * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
+     */
+    largeAvatar(): Buffer | null
+  }
+}
 export declare namespace input {
   export const enum InputType {
     Unknown = 'Unknown',
@@ -106,6 +215,36 @@ export declare namespace input {
   export function getActionSet(actionSetName: string): bigint
   export function getDigitalAction(actionName: string): bigint
   export function getAnalogAction(actionName: string): bigint
+  /**
+   * Get the local file path of the PNG glyph image for an action origin, as
+   * returned by an action-origin getter such as
+   * {@link Controller.getDigitalActionOrigins}.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetGlyphForActionOrigin}
+   */
+  export function getGlyphForActionOrigin(origin: number): string
+  /**
+   * Get the localized, human readable name of an action origin, such as
+   * "A Button", for showing in on-screen prompts.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetStringForActionOrigin}
+   */
+  export function getStringForActionOrigin(origin: number): string
+  /**
+   * Load a specific action manifest file from disk instead of the one
+   * configured on the Steamworks partner site. Returns false on failure.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#SetInputActionManifestFilePath}
+   */
+  export function setInputActionManifestFilePath(path: string): boolean
+  /**
+   * Synchronize the API state with the latest Steam Input action data. This is
+   * done automatically while callbacks are running; call it directly right
+   * before reading controller state for the lowest possible latency.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#RunFrame}
+   */
+  export function runFrame(): void
   export function shutdown(): void
   export class Controller {
     activateActionSet(actionSetHandle: bigint): void
@@ -113,6 +252,180 @@ export declare namespace input {
     getAnalogActionVector(actionHandle: bigint): AnalogActionVector
     getType(): InputType
     getHandle(): bigint
+    /**
+     * Get the origin(s) this controller currently binds a digital action to,
+     * within the given action set.
+     *
+     * Each origin is the numeric value of an `EInputActionOrigin`; pass it to
+     * {@link getGlyphForActionOrigin} or {@link getStringForActionOrigin} to
+     * show the player which physical input is bound.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetDigitalActionOrigins}
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#EInputActionOrigin}
+     */
+    getDigitalActionOrigins(actionSetHandle: bigint, actionHandle: bigint): Array<number>
+    /**
+     * Get the origin(s) this controller currently binds an analog action to,
+     * within the given action set.
+     *
+     * Each origin is the numeric value of an `EInputActionOrigin`; pass it to
+     * {@link getGlyphForActionOrigin} or {@link getStringForActionOrigin} to
+     * show the player which physical input is bound.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetAnalogActionOrigins}
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#EInputActionOrigin}
+     */
+    getAnalogActionOrigins(actionSetHandle: bigint, actionHandle: bigint): Array<number>
+    /**
+     * Open the Steam overlay's binding panel for this controller so the player
+     * can rebind their inputs. Returns false if the overlay is unavailable.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#ShowBindingPanel}
+     */
+    showBindingPanel(): boolean
+  }
+}
+export declare namespace leaderboard {
+  /**
+   * The sort order of a leaderboard.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardSortMethod}
+   */
+  export const enum LeaderboardSortMethod {
+    /** The top-score is the lowest number. */
+    Ascending = 0,
+    /** The top-score is the highest number. */
+    Descending = 1
+  }
+  /**
+   * How a leaderboard score is displayed in the Steam overlay and community.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardDisplayType}
+   */
+  export const enum LeaderboardDisplayType {
+    /** The score is just a simple numerical value. */
+    Numeric = 0,
+    /** The score represents a time, in seconds. */
+    TimeSeconds = 1,
+    /** The score represents a time, in milliseconds. */
+    TimeMilliSeconds = 2
+  }
+  /**
+   * How an uploaded score is treated when the user already has an entry.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardUploadScoreMethod}
+   */
+  export const enum LeaderboardUploadScoreMethod {
+    /** Only replaces the existing entry if the new score is better. */
+    KeepBest = 0,
+    /** Always replaces the existing entry, even with a worse score. */
+    ForceUpdate = 1
+  }
+  /**
+   * Which set of leaderboard entries to download.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardDataRequest}
+   */
+  export const enum LeaderboardDataRequest {
+    /** Query everyone on the leaderboard, `start` and `end` are absolute ranks (1 based). */
+    Global = 0,
+    /** Query around the current user, `start` and `end` are relative to the user's rank. */
+    GlobalAroundUser = 1,
+    /** Query the current user's friends, `start` and `end` are ignored. */
+    Friends = 2
+  }
+  /**
+   * The outcome of a successful score upload.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#LeaderboardScoreUploaded_t}
+   */
+  export interface LeaderboardScoreUploaded {
+    /** The score that was submitted. */
+    score: number
+    /**
+     * Whether the score on the leaderboard actually changed.
+     * False when `KeepBest` was used and the existing score was better.
+     */
+    scoreChanged: boolean
+    /** The new global rank of the user, 0 when the score did not change. */
+    globalRankNew: number
+    /** The global rank the user had before this upload, 0 when they had no entry. */
+    globalRankPrevious: number
+  }
+  /**
+   * A single downloaded leaderboard entry.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#LeaderboardEntry_t}
+   */
+  export interface LeaderboardEntry {
+    /** The user that owns this entry. */
+    steamId: PlayerSteamId
+    /** The global rank of this entry, 1 based. */
+    globalRank: number
+    /** The score of this entry. */
+    score: number
+    /**
+     * The game specific details uploaded with the score.
+     * Empty unless `maxDetailsLen` was greater than 0 when downloading.
+     */
+    details: Array<number>
+  }
+  /**
+   * Find a leaderboard by its name, as configured on the Steamworks partner site.
+   *
+   * Resolves to null when no leaderboard with that name exists.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#FindLeaderboard}
+   */
+  export function findLeaderboard(name: string): Promise<Leaderboard | null>
+  /**
+   * Find a leaderboard by name, creating it if it does not exist yet.
+   *
+   * The sort method and display type are only used when the leaderboard is created; an
+   * existing leaderboard keeps the settings it was created with.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#FindOrCreateLeaderboard}
+   */
+  export function findOrCreateLeaderboard(name: string, sortMethod: LeaderboardSortMethod, displayType: LeaderboardDisplayType): Promise<Leaderboard>
+  /**
+   * A handle to a Steam leaderboard, obtained through {@link findLeaderboard} or
+   * {@link findOrCreateLeaderboard}.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats}
+   */
+  export class Leaderboard {
+    /** The raw `SteamLeaderboard_t` handle. */
+    get handle(): bigint
+    /**
+     * Get the name of this leaderboard.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardName}
+     */
+    getName(): string
+    /**
+     * Get the total number of entries in this leaderboard.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardEntryCount}
+     */
+    getEntryCount(): number
+    /**
+     * Get the sort method of this leaderboard, or null if the handle is invalid.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardSortMethod}
+     */
+    getSortMethod(): LeaderboardSortMethod | null
+    /**
+     * Get the display type of this leaderboard, or null if the handle is invalid.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardDisplayType}
+     */
+    getDisplayType(): LeaderboardDisplayType | null
+    /**
+     * Upload a score to this leaderboard for the current user.
+     *
+     * `details` is optional game specific data (at most 64 entries) stored alongside the
+     * score, for example a replay seed or a per-level breakdown.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#UploadLeaderboardScore}
+     */
+    uploadScore(score: number, method: LeaderboardUploadScoreMethod, details?: Array<number> | undefined | null): Promise<LeaderboardScoreUploaded>
+    /**
+     * Download a range of entries from this leaderboard.
+     *
+     * The meaning of `start` and `end` depends on `request`: absolute 1 based ranks for
+     * `Global`, offsets relative to the current user for `GlobalAroundUser` (where `start`
+     * is usually negative, e.g. -4 to 5 for the ten entries around the user), and ignored
+     * for `Friends`. `maxDetailsLen` is how many details entries to read per row (0 to 64),
+     * pass 0 when the leaderboard has no details.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#DownloadLeaderboardEntries}
+     */
+    downloadEntries(request: LeaderboardDataRequest, start: number, end: number, maxDetailsLen: number): Promise<Array<LeaderboardEntry>>
   }
 }
 export declare namespace localplayer {
@@ -130,9 +443,93 @@ export declare namespace matchmaking {
     Public = 2,
     Invisible = 3
   }
+  /**
+   * Comparison used by a string lobby list filter.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyComparison
+   */
+  export const enum LobbyStringComparison {
+    EqualToOrLessThan = 0,
+    LessThan = 1,
+    Equal = 2,
+    GreaterThan = 3,
+    EqualToOrGreaterThan = 4,
+    NotEqual = 5
+  }
+  /**
+   * Comparison used by a numerical lobby list filter.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyComparison
+   */
+  export const enum LobbyNumberComparison {
+    Equal = 0,
+    NotEqual = 1,
+    GreaterThan = 2,
+    GreaterThanEqualTo = 3,
+    LessThan = 4,
+    LessThanEqualTo = 5
+  }
+  /**
+   * How far geographically the returned lobbies may be.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyDistanceFilter
+   */
+  export const enum LobbyDistanceFilter {
+    Close = 0,
+    Default = 1,
+    Far = 2,
+    Worldwide = 3
+  }
+  /**
+   * Matches lobbies whose string metadata compares against `value` as requested.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListStringFilter
+   */
+  export interface LobbyStringFilter {
+    key: string
+    value: string
+    comparison: LobbyStringComparison
+  }
+  /**
+   * Matches lobbies whose numerical metadata compares against `value` as requested.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListNumericalFilter
+   */
+  export interface LobbyNumberFilter {
+    key: string
+    value: number
+    comparison: LobbyNumberComparison
+  }
+  /**
+   * Sorts the results by how close their metadata is to `value`. This does not filter anything out.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListNearValueFilter
+   */
+  export interface LobbyNearFilter {
+    key: string
+    value: number
+  }
+  /**
+   * Filters applied to a lobby list request. Every field is optional; an empty
+   * filter returns the same lobbies as an unfiltered request.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
+   */
+  export interface LobbyListFilter {
+    /** String metadata comparisons a lobby has to satisfy */
+    stringFilters?: Array<LobbyStringFilter>
+    /** Numerical metadata comparisons a lobby has to satisfy */
+    numberFilters?: Array<LobbyNumberFilter>
+    /** Metadata values the results are sorted closest to */
+    nearValueFilters?: Array<LobbyNearFilter>
+    /** Only return lobbies with at least this many open slots (0-255) */
+    slotsAvailable?: number
+    /** How far geographically the returned lobbies may be */
+    distance?: LobbyDistanceFilter
+    /** Maximum amount of lobbies to return */
+    count?: number
+  }
   export function createLobby(lobbyType: LobbyType, maxMembers: number): Promise<Lobby>
   export function joinLobby(lobbyId: bigint): Promise<Lobby>
-  export function getLobbies(): Promise<Array<Lobby>>
+  /**
+   * Get the list of lobbies for this app, optionally narrowed down by `filter`.
+   * Calling this without a filter returns the unfiltered lobby list.
+   * @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
+   */
+  export function getLobbies(filter?: LobbyListFilter | undefined | null): Promise<Array<Lobby>>
   export class Lobby {
     id: bigint
     join(): Promise<Lobby>
@@ -215,6 +612,8 @@ export declare namespace overlay {
 export declare namespace stats {
   export function getInt(name: string): number | null
   export function setInt(name: string, value: number): boolean
+  export function getFloat(name: string): number | null
+  export function setFloat(name: string, value: number): boolean
   export function store(): boolean
   export function resetAll(achievementsToo: boolean): boolean
 }
@@ -252,6 +651,34 @@ export declare namespace workshop {
     Private = 2,
     Unlisted = 3
   }
+  /**
+   * A key/value pair attached to a workshop item. Steam allows up to 100 per item,
+   * and the same key may appear more than once with different values.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddItemKeyValueTag}
+   */
+  export interface KeyValueTag {
+    key: string
+    value: string
+  }
+  /**
+   * Content descriptors let creators flag mature content on a workshop item so Steam can
+   * filter it according to each user's Mature Content preferences.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamUGC#EUGCContentDescriptorID}
+   */
+  export const enum ContentDescriptor {
+    /** Some Nudity or Sexual Content: contains some nudity or sexual themes, but not as the primary focus. */
+    NudityOrSexualContent = 0,
+    /** Frequent Violence or Gore: contains extreme violence or gore. */
+    FrequentViolenceOrGore = 1,
+    /** Adult Only Sexual Content: sexually explicit or graphic content intended for adults only. */
+    AdultOnlySexualContent = 2,
+    /** Frequent Nudity or Sexual Content: primarily features nudity or sexual themes. */
+    GratuitousSexualContent = 3,
+    /** General Mature Content: mature topics that may not be appropriate for all audiences. */
+    AnyMatureContent = 4
+  }
   export interface UgcUpdate {
     title?: string
     description?: string
@@ -260,6 +687,50 @@ export declare namespace workshop {
     contentPath?: string
     tags?: Array<string>
     visibility?: UgcItemVisibility
+    /**
+     * Developer-defined metadata for the item, not shown to users. Up to 5000 bytes.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemMetadata}
+     */
+    metadata?: string
+    /**
+     * Key/value tags to add to the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddItemKeyValueTag}
+     */
+    keyValueTags?: Array<KeyValueTag>
+    /**
+     * Keys whose key/value tags should be removed from the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveItemKeyValueTags}
+     */
+    removeKeyValueTags?: Array<string>
+    /**
+     * Remove every key/value tag from the item. Applied before `keyValueTags`, so the two
+     * can be combined to replace the whole set.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveAllItemKeyValueTags}
+     */
+    removeAllKeyValueTags?: boolean
+    /**
+     * Content descriptors to add to the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddContentDescriptor}
+     */
+    contentDescriptors?: Array<ContentDescriptor>
+    /**
+     * Content descriptors to remove from the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveContentDescriptor}
+     */
+    removeContentDescriptors?: Array<ContentDescriptor>
+    /**
+     * Allow admin-only tags to be set alongside `tags`. Defaults to false, and only has an
+     * effect when `tags` is provided.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemTags}
+     */
+    allowAdminTags?: boolean
   }
   export interface InstallInfo {
     folder: string
@@ -352,6 +823,15 @@ export declare namespace workshop {
    * {@link https://partner.steamgames.com/doc/api/ISteamUGC#DownloadItem}
    */
   export function download(itemId: bigint, highPriority: boolean): boolean
+  /**
+   * Suspend or resume all workshop downloads. Useful to keep Steam from competing for
+   * bandwidth or disk while the game is loading.
+   *
+   * @param suspend - true to suspend downloads, false to resume them
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SuspendDownloads}
+   */
+  export function suspendDownloads(suspend: boolean): void
   /**
    * Get all subscribed workshop items.
    * @returns an array of subscribed workshop item ids
@@ -455,6 +935,20 @@ export declare namespace workshop {
     previewUrl?: string
     statistics: WorkshopItemStatistic
     children?: Array<bigint>
+    /**
+     * Key/value tags of the item. Only returned when the query was configured with
+     * `includeKeyValueTags`, and absent when the item has none.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#GetQueryUGCKeyValueTag}
+     */
+    keyValueTags?: Array<KeyValueTag>
+    /**
+     * Developer-defined metadata of the item. Only returned when the query was configured
+     * with `includeMetadata`, and absent when the item has none.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#GetQueryUGCMetadata}
+     */
+    metadata?: string
   }
   export interface WorkshopPaginatedResult {
     items: Array<WorkshopItem | undefined | null>
@@ -480,6 +974,24 @@ export declare namespace workshop {
     searchText?: string
     rankedByTrendDays?: number
     returnChildren?: boolean
+    /**
+     * Return each item's key/value tags, readable as `keyValueTags` on the results.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetReturnKeyValueTags}
+     */
+    includeKeyValueTags?: boolean
+    /**
+     * Only return items whose cloud file name matches this filter.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetCloudFileNameFilter}
+     */
+    cloudFileNameFilter?: string
+    /**
+     * Key/value tags that must all be present on the returned items.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddRequiredKeyValueTag}
+     */
+    requiredKeyValueTags?: Array<KeyValueTag>
   }
   export interface AppIDs {
     creator?: number
