@@ -16,6 +16,154 @@ pub mod matchmaking {
         Invisible,
     }
 
+    /// Comparison used by a string lobby list filter.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyComparison
+    #[napi]
+    pub enum LobbyStringComparison {
+        EqualToOrLessThan,
+        LessThan,
+        Equal,
+        GreaterThan,
+        EqualToOrGreaterThan,
+        NotEqual,
+    }
+
+    /// Comparison used by a numerical lobby list filter.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyComparison
+    #[napi]
+    pub enum LobbyNumberComparison {
+        Equal,
+        NotEqual,
+        GreaterThan,
+        GreaterThanEqualTo,
+        LessThan,
+        LessThanEqualTo,
+    }
+
+    /// How far geographically the returned lobbies may be.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#ELobbyDistanceFilter
+    #[napi]
+    pub enum LobbyDistanceFilter {
+        Close,
+        Default,
+        Far,
+        Worldwide,
+    }
+
+    /// Matches lobbies whose string metadata compares against `value` as requested.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListStringFilter
+    #[napi(object)]
+    pub struct LobbyStringFilter {
+        pub key: String,
+        pub value: String,
+        pub comparison: LobbyStringComparison,
+    }
+
+    /// Matches lobbies whose numerical metadata compares against `value` as requested.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListNumericalFilter
+    #[napi(object)]
+    pub struct LobbyNumberFilter {
+        pub key: String,
+        pub value: i32,
+        pub comparison: LobbyNumberComparison,
+    }
+
+    /// Sorts the results by how close their metadata is to `value`. This does not filter anything out.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#AddRequestLobbyListNearValueFilter
+    #[napi(object)]
+    pub struct LobbyNearFilter {
+        pub key: String,
+        pub value: i32,
+    }
+
+    /// Filters applied to a lobby list request. Every field is optional; an empty
+    /// filter returns the same lobbies as an unfiltered request.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
+    #[napi(object)]
+    pub struct LobbyListFilter {
+        /// String metadata comparisons a lobby has to satisfy
+        pub string_filters: Option<Vec<LobbyStringFilter>>,
+        /// Numerical metadata comparisons a lobby has to satisfy
+        pub number_filters: Option<Vec<LobbyNumberFilter>>,
+        /// Metadata values the results are sorted closest to
+        pub near_value_filters: Option<Vec<LobbyNearFilter>>,
+        /// Only return lobbies with at least this many open slots (0-255)
+        pub slots_available: Option<u8>,
+        /// How far geographically the returned lobbies may be
+        pub distance: Option<LobbyDistanceFilter>,
+        /// Maximum amount of lobbies to return
+        pub count: Option<u32>,
+    }
+
+    impl From<&LobbyStringComparison> for steamworks::StringFilterKind {
+        fn from(value: &LobbyStringComparison) -> Self {
+            match value {
+                LobbyStringComparison::EqualToOrLessThan => {
+                    steamworks::StringFilterKind::EqualToOrLessThan
+                }
+                LobbyStringComparison::LessThan => steamworks::StringFilterKind::LessThan,
+                LobbyStringComparison::Equal => steamworks::StringFilterKind::Equal,
+                LobbyStringComparison::GreaterThan => steamworks::StringFilterKind::GreaterThan,
+                LobbyStringComparison::EqualToOrGreaterThan => {
+                    steamworks::StringFilterKind::EqualToOrGreaterThan
+                }
+                LobbyStringComparison::NotEqual => steamworks::StringFilterKind::NotEqual,
+            }
+        }
+    }
+
+    impl From<&LobbyNumberComparison> for steamworks::ComparisonFilter {
+        fn from(value: &LobbyNumberComparison) -> Self {
+            match value {
+                LobbyNumberComparison::Equal => steamworks::ComparisonFilter::Equal,
+                LobbyNumberComparison::NotEqual => steamworks::ComparisonFilter::NotEqual,
+                LobbyNumberComparison::GreaterThan => steamworks::ComparisonFilter::GreaterThan,
+                LobbyNumberComparison::GreaterThanEqualTo => {
+                    steamworks::ComparisonFilter::GreaterThanEqualTo
+                }
+                LobbyNumberComparison::LessThan => steamworks::ComparisonFilter::LessThan,
+                LobbyNumberComparison::LessThanEqualTo => {
+                    steamworks::ComparisonFilter::LessThanEqualTo
+                }
+            }
+        }
+    }
+
+    impl From<&LobbyDistanceFilter> for steamworks::DistanceFilter {
+        fn from(value: &LobbyDistanceFilter) -> Self {
+            match value {
+                LobbyDistanceFilter::Close => steamworks::DistanceFilter::Close,
+                LobbyDistanceFilter::Default => steamworks::DistanceFilter::Default,
+                LobbyDistanceFilter::Far => steamworks::DistanceFilter::Far,
+                LobbyDistanceFilter::Worldwide => steamworks::DistanceFilter::Worldwide,
+            }
+        }
+    }
+
+    /// Steam takes lobby keys and values as C strings of at most 255 bytes, and the
+    /// underlying crate panics on anything else, so validate before handing them over.
+    fn lobby_filter_key(key: &str) -> Result<steamworks::LobbyKey<'_>, Error> {
+        if key.contains('\0') {
+            return Err(Error::from_reason(format!(
+                "Lobby filter key \"{}\" contains a null byte",
+                key.escape_debug()
+            )));
+        }
+
+        steamworks::LobbyKey::try_new(key).map_err(|e| Error::from_reason(e.to_string()))
+    }
+
+    fn lobby_filter_value(value: &str) -> Result<&str, Error> {
+        if value.contains('\0') {
+            return Err(Error::from_reason(format!(
+                "Lobby filter value \"{}\" contains a null byte",
+                value.escape_debug()
+            )));
+        }
+
+        Ok(value)
+    }
+
     #[napi]
     pub struct Lobby {
         pub id: BigInt,
@@ -181,15 +329,75 @@ pub mod matchmaking {
             .map_err(|_| Error::from_reason("Failed to join lobby".to_string()))
     }
 
+    /// Get the list of lobbies for this app, optionally narrowed down by `filter`.
+    /// Calling this without a filter returns the unfiltered lobby list.
+    /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
     #[napi]
-    pub async fn get_lobbies() -> Result<Vec<Lobby>, Error> {
+    pub async fn get_lobbies(filter: Option<LobbyListFilter>) -> Result<Vec<Lobby>, Error> {
         let client = crate::client::get_client();
 
         let (tx, rx) = oneshot::channel();
 
-        client.matchmaking().request_lobby_list(|lobbies| {
-            tx.send(lobbies).unwrap();
-        });
+        {
+            // The filters are applied to the same matchmaking accessor that issues the
+            // request, and only live until `request_lobby_list` consumes them, matching
+            // the steamworks-rs example. Keeping the accessor out of the await below
+            // also keeps this future `Send`.
+            let matchmaking = client.matchmaking();
+
+            match &filter {
+                Some(filter) => {
+                    let string = filter
+                        .string_filters
+                        .iter()
+                        .flatten()
+                        .map(|f| {
+                            Ok(steamworks::StringFilter(
+                                lobby_filter_key(&f.key)?,
+                                lobby_filter_value(&f.value)?,
+                                (&f.comparison).into(),
+                            ))
+                        })
+                        .collect::<Result<Vec<_>, Error>>()?;
+
+                    let number = filter
+                        .number_filters
+                        .iter()
+                        .flatten()
+                        .map(|f| {
+                            Ok(steamworks::NumberFilter(
+                                lobby_filter_key(&f.key)?,
+                                f.value,
+                                (&f.comparison).into(),
+                            ))
+                        })
+                        .collect::<Result<Vec<_>, Error>>()?;
+
+                    let near_value = filter
+                        .near_value_filters
+                        .iter()
+                        .flatten()
+                        .map(|f| Ok(steamworks::NearFilter(lobby_filter_key(&f.key)?, f.value)))
+                        .collect::<Result<Vec<_>, Error>>()?;
+
+                    matchmaking
+                        .set_lobby_list_filter(steamworks::LobbyListFilter {
+                            string: Some(string),
+                            number: Some(number),
+                            near_value: Some(near_value),
+                            open_slots: filter.slots_available,
+                            distance: filter.distance.as_ref().map(Into::into),
+                            count: filter.count.map(u64::from),
+                        })
+                        .request_lobby_list(|lobbies| {
+                            tx.send(lobbies).unwrap();
+                        });
+                }
+                None => matchmaking.request_lobby_list(|lobbies| {
+                    tx.send(lobbies).unwrap();
+                }),
+            }
+        }
 
         rx.await
             .unwrap()
