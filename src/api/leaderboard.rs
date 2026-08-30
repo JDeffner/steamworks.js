@@ -154,22 +154,34 @@ pub mod leaderboard {
     /// {@link https://partner.steamgames.com/doc/api/ISteamUserStats}
     #[napi]
     pub struct Leaderboard {
-        /// The raw `SteamLeaderboard_t` handle.
-        pub handle: BigInt,
         leaderboard: steamworks::Leaderboard,
     }
 
     impl Leaderboard {
         pub(crate) fn from_handle(leaderboard: steamworks::Leaderboard) -> Self {
-            Self {
-                handle: BigInt::from(leaderboard.raw()),
-                leaderboard,
-            }
+            Self { leaderboard }
+        }
+    }
+
+    // The crate unwraps CString::new on leaderboard names, so an interior null byte
+    // would otherwise panic inside the spawned future instead of rejecting cleanly.
+    fn leaderboard_name(name: &str) -> Result<&str, Error> {
+        if name.contains('\0') {
+            Err(Error::from_reason(
+                "Leaderboard name contains a null byte".to_string(),
+            ))
+        } else {
+            Ok(name)
         }
     }
 
     #[napi]
     impl Leaderboard {
+        /// The raw `SteamLeaderboard_t` handle.
+        #[napi(getter)]
+        pub fn handle(&self) -> BigInt {
+            BigInt::from(self.leaderboard.raw())
+        }
         /// Get the name of this leaderboard.
         /// {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardName}
         #[napi]
@@ -222,6 +234,18 @@ pub mod leaderboard {
             method: LeaderboardUploadScoreMethod,
             details: Option<Vec<i32>>,
         ) -> Result<LeaderboardScoreUploaded, Error> {
+            let details = details.unwrap_or_default();
+            let max_details = steamworks::sys::k_cLeaderboardDetailsMax as usize;
+            if details.len() > max_details {
+                // The SDK rejects oversized uploads with an invalid call handle, which
+                // would leave the promise pending forever instead of erroring.
+                return Err(Error::from_reason(format!(
+                    "details supports at most {} entries, got {}",
+                    max_details,
+                    details.len()
+                )));
+            }
+
             let client = crate::client::get_client();
 
             let (tx, rx) = oneshot::channel();
@@ -230,7 +254,7 @@ pub mod leaderboard {
                 &self.leaderboard,
                 method.into(),
                 score,
-                &details.unwrap_or_default(),
+                &details,
                 |result| {
                     tx.send(result).unwrap();
                 },
@@ -310,9 +334,11 @@ pub mod leaderboard {
 
         let (tx, rx) = oneshot::channel();
 
-        client.user_stats().find_leaderboard(&name, |result| {
-            tx.send(result).unwrap();
-        });
+        client
+            .user_stats()
+            .find_leaderboard(leaderboard_name(&name)?, |result| {
+                tx.send(result).unwrap();
+            });
 
         rx.await
             .unwrap()
@@ -336,7 +362,7 @@ pub mod leaderboard {
         let (tx, rx) = oneshot::channel();
 
         client.user_stats().find_or_create_leaderboard(
-            &name,
+            leaderboard_name(&name)?,
             sort_method.into(),
             display_type.into(),
             |result| {

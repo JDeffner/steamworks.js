@@ -110,7 +110,8 @@ export declare namespace friends {
     Away = 3,
     Snooze = 4,
     LookingToTrade = 5,
-    LookingToPlay = 6
+    LookingToPlay = 6,
+    Invisible = 7
   }
   /**
    * Information about the game a user is currently playing.
@@ -132,9 +133,10 @@ export declare namespace friends {
   }
   /**
    * Get the users matching the given relationship, the regular friends list by default.
+   * `flags` is a bitmask of `FriendFlags` values, which may be OR-ed together.
    * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetFriendByIndex)
    */
-  export function getFriends(flags?: FriendFlags | undefined | null): Array<Friend>
+  export function getFriends(flags?: number | undefined | null): Array<Friend>
   /**
    * Get the users on the local user's recently-played-with list.
    * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetCoplayFriend)
@@ -164,8 +166,11 @@ export declare namespace friends {
     getState(): FriendState
     /** Information about the game this user is currently playing, if any. */
     getGamePlayed(): FriendGame | null
-    /** Whether this user matches the given relationship criteria. */
-    hasFriend(flags: FriendFlags): boolean
+    /**
+     * Whether this user matches the given relationship criteria.
+     * `flags` is a bitmask of `FriendFlags` values, which may be OR-ed together.
+     */
+    hasFriend(flags: number): boolean
     /**
      * The small avatar of this user as raw RGBA bytes, 32x32 pixels (4096 bytes).
      * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
@@ -381,7 +386,7 @@ export declare namespace leaderboard {
    */
   export class Leaderboard {
     /** The raw `SteamLeaderboard_t` handle. */
-    handle: bigint
+    get handle(): bigint
     /**
      * Get the name of this leaderboard.
      * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardName}

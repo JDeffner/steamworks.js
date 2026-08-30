@@ -25,23 +25,10 @@ pub mod friends {
         All = 0xFFFF,
     }
 
-    impl From<FriendFlags> for steamworks::FriendFlags {
-        fn from(flags: FriendFlags) -> Self {
-            match flags {
-                FriendFlags::None => steamworks::FriendFlags::NONE,
-                FriendFlags::Blocked => steamworks::FriendFlags::BLOCKED,
-                FriendFlags::FriendshipRequested => steamworks::FriendFlags::FRIENDSHIP_REQUESTED,
-                FriendFlags::Immediate => steamworks::FriendFlags::IMMEDIATE,
-                FriendFlags::ClanMember => steamworks::FriendFlags::CLAN_MEMBER,
-                FriendFlags::OnGameServer => steamworks::FriendFlags::ON_GAME_SERVER,
-                FriendFlags::RequestingFriendship => steamworks::FriendFlags::REQUESTING_FRIENDSHIP,
-                FriendFlags::RequestingInfo => steamworks::FriendFlags::REQUESTING_INFO,
-                FriendFlags::Ignored => steamworks::FriendFlags::IGNORED,
-                FriendFlags::IgnoredFriend => steamworks::FriendFlags::IGNORED_FRIEND,
-                FriendFlags::ChatMember => steamworks::FriendFlags::CHAT_MEMBER,
-                FriendFlags::All => steamworks::FriendFlags::ALL,
-            }
-        }
+    // Flag parameters are plain u32 bitmasks so callers can OR variants together the way
+    // EFriendFlags supports; unknown bits are dropped rather than rejected.
+    fn friend_flags_from_bits(flags: u32) -> steamworks::FriendFlags {
+        steamworks::FriendFlags::from_bits_truncate(flags as u16)
     }
 
     /// The online state of a user.
@@ -55,20 +42,7 @@ pub mod friends {
         Snooze,
         LookingToTrade,
         LookingToPlay,
-    }
-
-    impl From<steamworks::FriendState> for FriendState {
-        fn from(state: steamworks::FriendState) -> Self {
-            match state {
-                steamworks::FriendState::Offline => FriendState::Offline,
-                steamworks::FriendState::Online => FriendState::Online,
-                steamworks::FriendState::Busy => FriendState::Busy,
-                steamworks::FriendState::Away => FriendState::Away,
-                steamworks::FriendState::Snooze => FriendState::Snooze,
-                steamworks::FriendState::LookingToTrade => FriendState::LookingToTrade,
-                steamworks::FriendState::LookingToPlay => FriendState::LookingToPlay,
-            }
-        }
+        Invisible,
     }
 
     /// Information about the game a user is currently playing.
@@ -140,8 +114,30 @@ pub mod friends {
         /// The online state of this user.
         #[napi]
         pub fn get_state(&self) -> FriendState {
-            let client = crate::client::get_client();
-            client.friends().get_friend(self.steam_id).state().into()
+            // Hold the client to guarantee Steam is initialized before touching the raw
+            // interface. The raw call sidesteps steamworks-rs' Friend::state(), whose
+            // non-exhaustive match panics on k_EPersonaStateInvisible and would abort the
+            // whole process from a sync napi method.
+            let _client = crate::client::get_client();
+            let state = unsafe {
+                let friends = steamworks::sys::SteamAPI_SteamFriends_v018();
+                steamworks::sys::SteamAPI_ISteamFriends_GetFriendPersonaState(
+                    friends,
+                    self.steam_id.raw(),
+                )
+            };
+            use steamworks::sys::EPersonaState;
+            match state {
+                EPersonaState::k_EPersonaStateOnline => FriendState::Online,
+                EPersonaState::k_EPersonaStateBusy => FriendState::Busy,
+                EPersonaState::k_EPersonaStateAway => FriendState::Away,
+                EPersonaState::k_EPersonaStateSnooze => FriendState::Snooze,
+                EPersonaState::k_EPersonaStateLookingToTrade => FriendState::LookingToTrade,
+                EPersonaState::k_EPersonaStateLookingToPlay => FriendState::LookingToPlay,
+                EPersonaState::k_EPersonaStateInvisible => FriendState::Invisible,
+                // Offline, plus any state added by a future SDK.
+                _ => FriendState::Offline,
+            }
         }
 
         /// Information about the game this user is currently playing, if any.
@@ -156,13 +152,14 @@ pub mod friends {
         }
 
         /// Whether this user matches the given relationship criteria.
+        /// `flags` is a bitmask of `FriendFlags` values, which may be OR-ed together.
         #[napi]
-        pub fn has_friend(&self, flags: FriendFlags) -> bool {
+        pub fn has_friend(&self, flags: u32) -> bool {
             let client = crate::client::get_client();
             client
                 .friends()
                 .get_friend(self.steam_id)
-                .has_friend(flags.into())
+                .has_friend(friend_flags_from_bits(flags))
         }
 
         /// The small avatar of this user as raw RGBA bytes, 32x32 pixels (4096 bytes).
@@ -203,13 +200,17 @@ pub mod friends {
     }
 
     /// Get the users matching the given relationship, the regular friends list by default.
+    /// `flags` is a bitmask of `FriendFlags` values, which may be OR-ed together.
     /// See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetFriendByIndex)
     #[napi]
-    pub fn get_friends(flags: Option<FriendFlags>) -> Vec<Friend> {
+    pub fn get_friends(flags: Option<u32>) -> Vec<Friend> {
         let client = crate::client::get_client();
+        let flags = flags
+            .map(friend_flags_from_bits)
+            .unwrap_or(steamworks::FriendFlags::IMMEDIATE);
         client
             .friends()
-            .get_friends(flags.unwrap_or(FriendFlags::Immediate).into())
+            .get_friends(flags)
             .into_iter()
             .map(|friend| Friend::from_steamid(friend.id()))
             .collect()

@@ -334,11 +334,19 @@ pub mod matchmaking {
     /// @see https://partner.steamgames.com/doc/api/ISteamMatchmaking#RequestLobbyList
     #[napi]
     pub async fn get_lobbies(filter: Option<LobbyListFilter>) -> Result<Vec<Lobby>, Error> {
+        static LOBBY_LIST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
         let client = crate::client::get_client();
 
         let (tx, rx) = oneshot::channel();
 
         {
+            // Steam keeps the pending lobby-list filters in process-global state that
+            // RequestLobbyList consumes, so the apply-and-request section must not
+            // interleave between concurrent getLobbies calls. The lock only spans the
+            // synchronous section; Steam owns its own copy once the request is issued.
+            let _guard = LOBBY_LIST_LOCK.lock().unwrap();
+
             // The filters are applied to the same matchmaking accessor that issues the
             // request, and only live until `request_lobby_list` consumes them, matching
             // the steamworks-rs example. Keeping the accessor out of the await below

@@ -76,6 +76,12 @@ export default function main() {
 		console.log(friend.hasFriend(client.friends.FriendFlags.OnGameServer))
 	}
 
+	// Flags are a bitmask and may be combined
+	const blockedOrIgnored = client.friends.getFriends(
+		client.friends.FriendFlags.Blocked | client.friends.FriendFlags.Ignored
+	)
+	console.log(blockedOrIgnored.length)
+
 	for (const coplayer of client.friends.getCoplayFriends()) {
 		console.log(coplayer.getName(), coplayer.mediumAvatar()?.length, coplayer.largeAvatar()?.length)
 	}
