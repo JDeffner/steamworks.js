@@ -115,6 +115,149 @@ export declare namespace input {
     getHandle(): bigint
   }
 }
+export declare namespace leaderboard {
+  /**
+   * The sort order of a leaderboard.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardSortMethod}
+   */
+  export const enum LeaderboardSortMethod {
+    /** The top-score is the lowest number. */
+    Ascending = 0,
+    /** The top-score is the highest number. */
+    Descending = 1
+  }
+  /**
+   * How a leaderboard score is displayed in the Steam overlay and community.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardDisplayType}
+   */
+  export const enum LeaderboardDisplayType {
+    /** The score is just a simple numerical value. */
+    Numeric = 0,
+    /** The score represents a time, in seconds. */
+    TimeSeconds = 1,
+    /** The score represents a time, in milliseconds. */
+    TimeMilliSeconds = 2
+  }
+  /**
+   * How an uploaded score is treated when the user already has an entry.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardUploadScoreMethod}
+   */
+  export const enum LeaderboardUploadScoreMethod {
+    /** Only replaces the existing entry if the new score is better. */
+    KeepBest = 0,
+    /** Always replaces the existing entry, even with a worse score. */
+    ForceUpdate = 1
+  }
+  /**
+   * Which set of leaderboard entries to download.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#ELeaderboardDataRequest}
+   */
+  export const enum LeaderboardDataRequest {
+    /** Query everyone on the leaderboard, `start` and `end` are absolute ranks (1 based). */
+    Global = 0,
+    /** Query around the current user, `start` and `end` are relative to the user's rank. */
+    GlobalAroundUser = 1,
+    /** Query the current user's friends, `start` and `end` are ignored. */
+    Friends = 2
+  }
+  /**
+   * The outcome of a successful score upload.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#LeaderboardScoreUploaded_t}
+   */
+  export interface LeaderboardScoreUploaded {
+    /** The score that was submitted. */
+    score: number
+    /**
+     * Whether the score on the leaderboard actually changed.
+     * False when `KeepBest` was used and the existing score was better.
+     */
+    scoreChanged: boolean
+    /** The new global rank of the user, 0 when the score did not change. */
+    globalRankNew: number
+    /** The global rank the user had before this upload, 0 when they had no entry. */
+    globalRankPrevious: number
+  }
+  /**
+   * A single downloaded leaderboard entry.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#LeaderboardEntry_t}
+   */
+  export interface LeaderboardEntry {
+    /** The user that owns this entry. */
+    steamId: PlayerSteamId
+    /** The global rank of this entry, 1 based. */
+    globalRank: number
+    /** The score of this entry. */
+    score: number
+    /**
+     * The game specific details uploaded with the score.
+     * Empty unless `maxDetailsLen` was greater than 0 when downloading.
+     */
+    details: Array<number>
+  }
+  /**
+   * Find a leaderboard by its name, as configured on the Steamworks partner site.
+   *
+   * Resolves to null when no leaderboard with that name exists.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#FindLeaderboard}
+   */
+  export function findLeaderboard(name: string): Promise<Leaderboard | null>
+  /**
+   * Find a leaderboard by name, creating it if it does not exist yet.
+   *
+   * The sort method and display type are only used when the leaderboard is created; an
+   * existing leaderboard keeps the settings it was created with.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#FindOrCreateLeaderboard}
+   */
+  export function findOrCreateLeaderboard(name: string, sortMethod: LeaderboardSortMethod, displayType: LeaderboardDisplayType): Promise<Leaderboard>
+  /**
+   * A handle to a Steam leaderboard, obtained through {@link findLeaderboard} or
+   * {@link findOrCreateLeaderboard}.
+   * {@link https://partner.steamgames.com/doc/api/ISteamUserStats}
+   */
+  export class Leaderboard {
+    /** The raw `SteamLeaderboard_t` handle. */
+    handle: bigint
+    /**
+     * Get the name of this leaderboard.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardName}
+     */
+    getName(): string
+    /**
+     * Get the total number of entries in this leaderboard.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardEntryCount}
+     */
+    getEntryCount(): number
+    /**
+     * Get the sort method of this leaderboard, or null if the handle is invalid.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardSortMethod}
+     */
+    getSortMethod(): LeaderboardSortMethod | null
+    /**
+     * Get the display type of this leaderboard, or null if the handle is invalid.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#GetLeaderboardDisplayType}
+     */
+    getDisplayType(): LeaderboardDisplayType | null
+    /**
+     * Upload a score to this leaderboard for the current user.
+     *
+     * `details` is optional game specific data (at most 64 entries) stored alongside the
+     * score, for example a replay seed or a per-level breakdown.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#UploadLeaderboardScore}
+     */
+    uploadScore(score: number, method: LeaderboardUploadScoreMethod, details?: Array<number> | undefined | null): Promise<LeaderboardScoreUploaded>
+    /**
+     * Download a range of entries from this leaderboard.
+     *
+     * The meaning of `start` and `end` depends on `request`: absolute 1 based ranks for
+     * `Global`, offsets relative to the current user for `GlobalAroundUser` (where `start`
+     * is usually negative, e.g. -4 to 5 for the ten entries around the user), and ignored
+     * for `Friends`. `maxDetailsLen` is how many details entries to read per row (0 to 64),
+     * pass 0 when the leaderboard has no details.
+     * {@link https://partner.steamgames.com/doc/api/ISteamUserStats#DownloadLeaderboardEntries}
+     */
+    downloadEntries(request: LeaderboardDataRequest, start: number, end: number, maxDetailsLen: number): Promise<Array<LeaderboardEntry>>
+  }
+}
 export declare namespace localplayer {
   export function getSteamId(): PlayerSteamId
   export function getName(): string
@@ -215,6 +358,8 @@ export declare namespace overlay {
 export declare namespace stats {
   export function getInt(name: string): number | null
   export function setInt(name: string, value: number): boolean
+  export function getFloat(name: string): number | null
+  export function setFloat(name: string, value: number): boolean
   export function store(): boolean
   export function resetAll(achievementsToo: boolean): boolean
 }

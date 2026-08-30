@@ -15,6 +15,25 @@ pub mod stats {
     }
 
     #[napi]
+    pub fn get_float(name: String) -> Option<f64> {
+        let client = crate::client::get_client();
+        client
+            .user_stats()
+            .get_stat_f32(&name)
+            .ok()
+            .map(|value| value as f64)
+    }
+
+    #[napi]
+    pub fn set_float(name: String, value: f64) -> bool {
+        let client = crate::client::get_client();
+        client
+            .user_stats()
+            .set_stat_f32(&name, value as f32)
+            .is_ok()
+    }
+
+    #[napi]
     pub fn store() -> bool {
         let client = crate::client::get_client();
         client.user_stats().store_stats().is_ok()
