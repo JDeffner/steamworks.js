@@ -19,7 +19,7 @@ This is an [npm alias install](https://docs.npmjs.com/cli/v10/commands/npm-insta
 ```json
 {
     "dependencies": {
-        "steamworks.js": "npm:@jdeffner/steamworks.js@^0.5.0"
+        "steamworks.js": "npm:@jdeffner/steamworks.js@^0.6.0"
     }
 }
 ```
@@ -35,6 +35,17 @@ npm i @jdeffner/steamworks.js
 ```
 
 Then import it as `require('@jdeffner/steamworks.js')`. You lose the drop-in property — every import and every packaging path has to be updated — so prefer the alias install unless you have a reason not to.
+
+### Alternative: GitHub Packages
+
+The same package is published to [GitHub Packages](https://github.com/JDeffner/steamworks.js/pkgs/npm/steamworks.js) on every release. Unlike npmjs.org, GitHub's npm registry requires authentication even for public packages, so this path is for teams that already route their npm traffic through GitHub. Point the `@jdeffner` scope at the GitHub registry in your project's `.npmrc`:
+
+```ini
+@jdeffner:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+`GITHUB_TOKEN` needs the `read:packages` scope (a classic personal access token, or the automatic token in GitHub Actions). The alias install works the same afterwards.
 
 ## Supported platforms
 
