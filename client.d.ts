@@ -79,6 +79,110 @@ export declare namespace cloud {
     size: bigint
   }
 }
+export declare namespace friends {
+  /**
+   * Flags to filter the friends list by relationship.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#EFriendFlags)
+   */
+  export const enum FriendFlags {
+    None = 0,
+    Blocked = 1,
+    FriendshipRequested = 2,
+    /** The usual friends list. */
+    Immediate = 4,
+    ClanMember = 8,
+    OnGameServer = 16,
+    RequestingFriendship = 128,
+    RequestingInfo = 256,
+    Ignored = 512,
+    IgnoredFriend = 1024,
+    ChatMember = 4096,
+    All = 65535
+  }
+  /**
+   * The online state of a user.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#EPersonaState)
+   */
+  export const enum FriendState {
+    Offline = 0,
+    Online = 1,
+    Busy = 2,
+    Away = 3,
+    Snooze = 4,
+    LookingToTrade = 5,
+    LookingToPlay = 6
+  }
+  /**
+   * Information about the game a user is currently playing.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetFriendGamePlayed)
+   */
+  export interface FriendGame {
+    /** The id of the game being played. */
+    gameId: bigint
+    /** The app id of the game being played. */
+    appId: number
+    /** The IPv4 address of the server the player is on, "0.0.0.0" if none. */
+    gameAddress: string
+    /** The game port of the server the player is on, 0 if none. */
+    gamePort: number
+    /** The query port of the server the player is on, 0 if none. */
+    queryPort: number
+    /** The id of the lobby the player is in, 0 if none. */
+    lobbyId: bigint
+  }
+  /**
+   * Get the users matching the given relationship, the regular friends list by default.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetFriendByIndex)
+   */
+  export function getFriends(flags?: FriendFlags | undefined | null): Array<Friend>
+  /**
+   * Get the users on the local user's recently-played-with list.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#GetCoplayFriend)
+   */
+  export function getCoplayFriends(): Array<Friend>
+  /** Get an arbitrary user by steam id, they don't have to be a friend. */
+  export function getFriend(steamId64: bigint): Friend
+  /**
+   * Request the persona name and optionally the avatar of a user from Steam.
+   * @param nameOnly - Only request the name, skipping the avatar.
+   * @returns true if the information is being fetched, false if it was already available.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends#RequestUserInformation)
+   */
+  export function requestUserInformation(steamId64: bigint, nameOnly: boolean): boolean
+  /**
+   * A Steam user, as seen through the friends interface.
+   * See [Steam API](https://partner.steamgames.com/doc/api/ISteamFriends)
+   */
+  export class Friend {
+    /** The steam id of this user. */
+    getSteamId(): PlayerSteamId
+    /** The current display (persona) name of this user. */
+    getName(): string
+    /** The nickname the local user has set for this user, if any. */
+    getNickName(): string | null
+    /** The online state of this user. */
+    getState(): FriendState
+    /** Information about the game this user is currently playing, if any. */
+    getGamePlayed(): FriendGame | null
+    /** Whether this user matches the given relationship criteria. */
+    hasFriend(flags: FriendFlags): boolean
+    /**
+     * The small avatar of this user as raw RGBA bytes, 32x32 pixels (4096 bytes).
+     * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
+     */
+    smallAvatar(): Buffer | null
+    /**
+     * The medium avatar of this user as raw RGBA bytes, 64x64 pixels (16384 bytes).
+     * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
+     */
+    mediumAvatar(): Buffer | null
+    /**
+     * The large avatar of this user as raw RGBA bytes, 184x184 pixels (135424 bytes).
+     * Returns null when the avatar is not loaded yet, use `requestUserInformation` to fetch it.
+     */
+    largeAvatar(): Buffer | null
+  }
+}
 export declare namespace input {
   export const enum InputType {
     Unknown = 'Unknown',
