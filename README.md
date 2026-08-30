@@ -17,7 +17,14 @@ The API is a superset of upstream. Install it under the original name and your i
 npm i steamworks.js@npm:@jdeffner/steamworks.js
 ```
 
-Compared to the `steamworks.js` package on npm (0.4.0), version 0.5.0 adds:
+The package is also on [GitHub Packages](https://github.com/JDeffner/steamworks.js/pkgs/npm/steamworks.js). To install from there instead of npmjs.org, point the `@jdeffner` scope at the GitHub registry in your project's `.npmrc` and authenticate with a GitHub token that has the `read:packages` scope:
+
+```ini
+@jdeffner:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+Compared to the `steamworks.js` package on npm (0.4.0), this fork adds:
 
 * Everything merged to upstream `main` after the 0.4.0 release: `achievement.names()`, `cloud.listFiles()`, cloud enable/disable, `Controller.getHandle()`, workshop paginated queries, and `workshop.deleteItem()`
 * Steamworks SDK upgrade through [steamworks-rs](https://github.com/Noxime/steamworks-rs) v0.12.1 with refreshed redistributables ([#196](https://github.com/ceifa/steamworks.js/pull/196))
