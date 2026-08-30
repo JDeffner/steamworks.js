@@ -252,6 +252,34 @@ export declare namespace workshop {
     Private = 2,
     Unlisted = 3
   }
+  /**
+   * A key/value pair attached to a workshop item. Steam allows up to 100 per item,
+   * and the same key may appear more than once with different values.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddItemKeyValueTag}
+   */
+  export interface KeyValueTag {
+    key: string
+    value: string
+  }
+  /**
+   * Content descriptors let creators flag mature content on a workshop item so Steam can
+   * filter it according to each user's Mature Content preferences.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamUGC#EUGCContentDescriptorID}
+   */
+  export const enum ContentDescriptor {
+    /** Some Nudity or Sexual Content: contains some nudity or sexual themes, but not as the primary focus. */
+    NudityOrSexualContent = 0,
+    /** Frequent Violence or Gore: contains extreme violence or gore. */
+    FrequentViolenceOrGore = 1,
+    /** Adult Only Sexual Content: sexually explicit or graphic content intended for adults only. */
+    AdultOnlySexualContent = 2,
+    /** Frequent Nudity or Sexual Content: primarily features nudity or sexual themes. */
+    GratuitousSexualContent = 3,
+    /** General Mature Content: mature topics that may not be appropriate for all audiences. */
+    AnyMatureContent = 4
+  }
   export interface UgcUpdate {
     title?: string
     description?: string
@@ -260,6 +288,50 @@ export declare namespace workshop {
     contentPath?: string
     tags?: Array<string>
     visibility?: UgcItemVisibility
+    /**
+     * Developer-defined metadata for the item, not shown to users. Up to 5000 bytes.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemMetadata}
+     */
+    metadata?: string
+    /**
+     * Key/value tags to add to the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddItemKeyValueTag}
+     */
+    keyValueTags?: Array<KeyValueTag>
+    /**
+     * Keys whose key/value tags should be removed from the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveItemKeyValueTags}
+     */
+    removeKeyValueTags?: Array<string>
+    /**
+     * Remove every key/value tag from the item. Applied before `keyValueTags`, so the two
+     * can be combined to replace the whole set.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveAllItemKeyValueTags}
+     */
+    removeAllKeyValueTags?: boolean
+    /**
+     * Content descriptors to add to the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddContentDescriptor}
+     */
+    contentDescriptors?: Array<ContentDescriptor>
+    /**
+     * Content descriptors to remove from the item.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveContentDescriptor}
+     */
+    removeContentDescriptors?: Array<ContentDescriptor>
+    /**
+     * Allow admin-only tags to be set alongside `tags`. Defaults to false, and only has an
+     * effect when `tags` is provided.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemTags}
+     */
+    allowAdminTags?: boolean
   }
   export interface InstallInfo {
     folder: string
@@ -352,6 +424,15 @@ export declare namespace workshop {
    * {@link https://partner.steamgames.com/doc/api/ISteamUGC#DownloadItem}
    */
   export function download(itemId: bigint, highPriority: boolean): boolean
+  /**
+   * Suspend or resume all workshop downloads. Useful to keep Steam from competing for
+   * bandwidth or disk while the game is loading.
+   *
+   * @param suspend - true to suspend downloads, false to resume them
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SuspendDownloads}
+   */
+  export function suspendDownloads(suspend: boolean): void
   /**
    * Get all subscribed workshop items.
    * @returns an array of subscribed workshop item ids
@@ -455,6 +536,20 @@ export declare namespace workshop {
     previewUrl?: string
     statistics: WorkshopItemStatistic
     children?: Array<bigint>
+    /**
+     * Key/value tags of the item. Only returned when the query was configured with
+     * `includeKeyValueTags`, and absent when the item has none.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#GetQueryUGCKeyValueTag}
+     */
+    keyValueTags?: Array<KeyValueTag>
+    /**
+     * Developer-defined metadata of the item. Only returned when the query was configured
+     * with `includeMetadata`, and absent when the item has none.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#GetQueryUGCMetadata}
+     */
+    metadata?: string
   }
   export interface WorkshopPaginatedResult {
     items: Array<WorkshopItem | undefined | null>
@@ -480,6 +575,24 @@ export declare namespace workshop {
     searchText?: string
     rankedByTrendDays?: number
     returnChildren?: boolean
+    /**
+     * Return each item's key/value tags, readable as `keyValueTags` on the results.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetReturnKeyValueTags}
+     */
+    includeKeyValueTags?: boolean
+    /**
+     * Only return items whose cloud file name matches this filter.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetCloudFileNameFilter}
+     */
+    cloudFileNameFilter?: string
+    /**
+     * Key/value tags that must all be present on the returned items.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddRequiredKeyValueTag}
+     */
+    requiredKeyValueTags?: Array<KeyValueTag>
   }
   export interface AppIDs {
     creator?: number
