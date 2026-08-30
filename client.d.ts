@@ -210,6 +210,36 @@ export declare namespace input {
   export function getActionSet(actionSetName: string): bigint
   export function getDigitalAction(actionName: string): bigint
   export function getAnalogAction(actionName: string): bigint
+  /**
+   * Get the local file path of the PNG glyph image for an action origin, as
+   * returned by an action-origin getter such as
+   * {@link Controller.getDigitalActionOrigins}.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetGlyphForActionOrigin}
+   */
+  export function getGlyphForActionOrigin(origin: number): string
+  /**
+   * Get the localized, human readable name of an action origin, such as
+   * "A Button", for showing in on-screen prompts.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetStringForActionOrigin}
+   */
+  export function getStringForActionOrigin(origin: number): string
+  /**
+   * Load a specific action manifest file from disk instead of the one
+   * configured on the Steamworks partner site. Returns false on failure.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#SetInputActionManifestFilePath}
+   */
+  export function setInputActionManifestFilePath(path: string): boolean
+  /**
+   * Synchronize the API state with the latest Steam Input action data. This is
+   * done automatically while callbacks are running; call it directly right
+   * before reading controller state for the lowest possible latency.
+   *
+   * {@link https://partner.steamgames.com/doc/api/ISteamInput#RunFrame}
+   */
+  export function runFrame(): void
   export function shutdown(): void
   export class Controller {
     activateActionSet(actionSetHandle: bigint): void
@@ -217,6 +247,37 @@ export declare namespace input {
     getAnalogActionVector(actionHandle: bigint): AnalogActionVector
     getType(): InputType
     getHandle(): bigint
+    /**
+     * Get the origin(s) this controller currently binds a digital action to,
+     * within the given action set.
+     *
+     * Each origin is the numeric value of an `EInputActionOrigin`; pass it to
+     * {@link getGlyphForActionOrigin} or {@link getStringForActionOrigin} to
+     * show the player which physical input is bound.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetDigitalActionOrigins}
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#EInputActionOrigin}
+     */
+    getDigitalActionOrigins(actionSetHandle: bigint, actionHandle: bigint): Array<number>
+    /**
+     * Get the origin(s) this controller currently binds an analog action to,
+     * within the given action set.
+     *
+     * Each origin is the numeric value of an `EInputActionOrigin`; pass it to
+     * {@link getGlyphForActionOrigin} or {@link getStringForActionOrigin} to
+     * show the player which physical input is bound.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#GetAnalogActionOrigins}
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#EInputActionOrigin}
+     */
+    getAnalogActionOrigins(actionSetHandle: bigint, actionHandle: bigint): Array<number>
+    /**
+     * Open the Steam overlay's binding panel for this controller so the player
+     * can rebind their inputs. Returns false if the overlay is unavailable.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamInput#ShowBindingPanel}
+     */
+    showBindingPanel(): boolean
   }
 }
 export declare namespace leaderboard {
