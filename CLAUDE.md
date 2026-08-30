@@ -56,7 +56,7 @@ Patterns to copy when adding bindings (read a neighboring module first, e.g. `ma
 - JS in `index.js` uses 4-space indent and JSDoc types (this file *is* the type source for `index.d.ts`). Rust follows whatever `cargo fmt` says.
 - New public API gets a JSDoc/doc-comment line, ideally linking the Steamworks docs page like the existing bindings do.
 - Never open a PR, publish to npm, or push tags unless explicitly asked. Releases: bump `package.json` version, tag `v*`, and the Publish workflow builds all platforms; npm publish is manual by the maintainer.
-- Don't commit plans, scratch notes, or agent working files. The repo is the product; this file and the README are the docs.
+- Don't commit plans, scratch notes, or agent working files. The repo is the product; this file, the README, and `wiki/` are the docs. The `wiki/` directory is the source of truth for the GitHub wiki — a workflow syncs it on push to main; never edit the GitHub wiki directly, and update the relevant `wiki/` page when you change public API.
 
 ## Roadmap
 
