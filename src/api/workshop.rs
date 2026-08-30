@@ -47,6 +47,58 @@ pub mod workshop {
         }
     }
 
+    /// A key/value pair attached to a workshop item. Steam allows up to 100 per item,
+    /// and the same key may appear more than once with different values.
+    ///
+    /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddItemKeyValueTag}
+    #[derive(Debug)]
+    #[napi(object)]
+    pub struct KeyValueTag {
+        pub key: String,
+        pub value: String,
+    }
+
+    /// Content descriptors let creators flag mature content on a workshop item so Steam can
+    /// filter it according to each user's Mature Content preferences.
+    ///
+    /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#EUGCContentDescriptorID}
+    #[derive(Debug)]
+    #[napi]
+    pub enum ContentDescriptor {
+        /// Some Nudity or Sexual Content: contains some nudity or sexual themes, but not as the primary focus.
+        NudityOrSexualContent,
+        /// Frequent Violence or Gore: contains extreme violence or gore.
+        FrequentViolenceOrGore,
+        /// Adult Only Sexual Content: sexually explicit or graphic content intended for adults only.
+        AdultOnlySexualContent,
+        /// Frequent Nudity or Sexual Content: primarily features nudity or sexual themes.
+        GratuitousSexualContent,
+        /// General Mature Content: mature topics that may not be appropriate for all audiences.
+        AnyMatureContent,
+    }
+
+    impl From<ContentDescriptor> for steamworks::UGCContentDescriptorID {
+        fn from(val: ContentDescriptor) -> Self {
+            match val {
+                ContentDescriptor::NudityOrSexualContent => {
+                    steamworks::UGCContentDescriptorID::NudityOrSexualContent
+                }
+                ContentDescriptor::FrequentViolenceOrGore => {
+                    steamworks::UGCContentDescriptorID::FrequentViolenceOrGore
+                }
+                ContentDescriptor::AdultOnlySexualContent => {
+                    steamworks::UGCContentDescriptorID::AdultOnlySexualContent
+                }
+                ContentDescriptor::GratuitousSexualContent => {
+                    steamworks::UGCContentDescriptorID::GratuitousSexualContent
+                }
+                ContentDescriptor::AnyMatureContent => {
+                    steamworks::UGCContentDescriptorID::AnyMatureContent
+                }
+            }
+        }
+    }
+
     #[napi(object)]
     pub struct UgcUpdate {
         pub title: Option<String>,
@@ -56,6 +108,36 @@ pub mod workshop {
         pub content_path: Option<String>,
         pub tags: Option<Vec<String>>,
         pub visibility: Option<UgcItemVisibility>,
+        /// Developer-defined metadata for the item, not shown to users. Up to 5000 bytes.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemMetadata}
+        pub metadata: Option<String>,
+        /// Key/value tags to add to the item.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddItemKeyValueTag}
+        pub key_value_tags: Option<Vec<KeyValueTag>>,
+        /// Keys whose key/value tags should be removed from the item.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveItemKeyValueTags}
+        pub remove_key_value_tags: Option<Vec<String>>,
+        /// Remove every key/value tag from the item. Applied before `keyValueTags`, so the two
+        /// can be combined to replace the whole set.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveAllItemKeyValueTags}
+        pub remove_all_key_value_tags: Option<bool>,
+        /// Content descriptors to add to the item.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#AddContentDescriptor}
+        pub content_descriptors: Option<Vec<ContentDescriptor>>,
+        /// Content descriptors to remove from the item.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#RemoveContentDescriptor}
+        pub remove_content_descriptors: Option<Vec<ContentDescriptor>>,
+        /// Allow admin-only tags to be set alongside `tags`. Defaults to false, and only has an
+        /// effect when `tags` is provided.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemTags}
+        pub allow_admin_tags: Option<bool>,
     }
 
     impl UgcUpdate {
@@ -79,7 +161,7 @@ pub mod workshop {
             }
 
             if let Some(tags) = self.tags {
-                update = update.tags(tags, false);
+                update = update.tags(tags, self.allow_admin_tags.unwrap_or(false));
             }
 
             if let Some(content_path) = self.content_path {
@@ -88,6 +170,39 @@ pub mod workshop {
 
             if let Some(visibility) = self.visibility {
                 update = update.visibility(visibility.into());
+            }
+
+            if let Some(metadata) = self.metadata {
+                update = update.metadata(metadata.as_str());
+            }
+
+            // Clear before adding so an update can replace the whole set in one call.
+            if self.remove_all_key_value_tags.unwrap_or(false) {
+                update = update.remove_all_key_value_tags();
+            }
+
+            if let Some(remove_key_value_tags) = self.remove_key_value_tags {
+                for key in remove_key_value_tags {
+                    update = update.remove_key_value_tag(key.as_str());
+                }
+            }
+
+            if let Some(key_value_tags) = self.key_value_tags {
+                for tag in key_value_tags {
+                    update = update.add_key_value_tag(tag.key.as_str(), tag.value.as_str());
+                }
+            }
+
+            if let Some(remove_content_descriptors) = self.remove_content_descriptors {
+                for descriptor in remove_content_descriptors {
+                    update = update.remove_content_descriptor(descriptor.into());
+                }
+            }
+
+            if let Some(content_descriptors) = self.content_descriptors {
+                for descriptor in content_descriptors {
+                    update = update.add_content_descriptor(descriptor.into());
+                }
             }
 
             let change_note = self.change_note.as_deref();
@@ -437,6 +552,18 @@ pub mod workshop {
         client
             .ugc()
             .download_item(PublishedFileId(item_id.get_u64().1), high_priority)
+    }
+
+    /// Suspend or resume all workshop downloads. Useful to keep Steam from competing for
+    /// bandwidth or disk while the game is loading.
+    ///
+    /// @param suspend - true to suspend downloads, false to resume them
+    ///
+    /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SuspendDownloads}
+    #[napi]
+    pub fn suspend_downloads(suspend: bool) {
+        let client = crate::client::get_client();
+        client.ugc().suspend_downloads(suspend);
     }
 
     /// Get all subscribed workshop items.
