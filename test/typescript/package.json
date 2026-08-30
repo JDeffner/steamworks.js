@@ -9,6 +9,6 @@
     },
     "main": "index.ts",
     "scripts": {
-        "compile": "tsc --noEmit --strict index.ts"
+        "compile": "tsc --noEmit --strict --target ES2020 --moduleResolution node index.ts"
     }
 }
