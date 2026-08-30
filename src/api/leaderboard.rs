@@ -165,11 +165,24 @@ pub mod leaderboard {
 
     // The crate unwraps CString::new on leaderboard names, so an interior null byte
     // would otherwise panic inside the spawned future instead of rejecting cleanly.
+    // An empty or over-length name makes the SDK return an invalid call handle whose
+    // callback never fires, which would leave the promise pending forever.
     fn leaderboard_name(name: &str) -> Result<&str, Error> {
+        let max_len = steamworks::sys::k_cchLeaderboardNameMax as usize;
         if name.contains('\0') {
             Err(Error::from_reason(
                 "Leaderboard name contains a null byte".to_string(),
             ))
+        } else if name.is_empty() {
+            Err(Error::from_reason(
+                "Leaderboard name must not be empty".to_string(),
+            ))
+        } else if name.len() >= max_len {
+            Err(Error::from_reason(format!(
+                "Leaderboard name must be shorter than {} bytes, got {}",
+                max_len,
+                name.len()
+            )))
         } else {
             Ok(name)
         }

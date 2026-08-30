@@ -114,6 +114,16 @@ pub mod friends {
         /// The online state of this user.
         #[napi]
         pub fn get_state(&self) -> FriendState {
+            // Redeclared with a raw u32 return (ABI-identical to the repr(u32) enum the
+            // generated bindings use) so a persona state added by a future Steam client
+            // stays a plain integer instead of an out-of-range enum value, which would be
+            // undefined behavior before any match arm could run.
+            extern "C" {
+                fn SteamAPI_ISteamFriends_GetFriendPersonaState(
+                    this: *mut steamworks::sys::ISteamFriends,
+                    steam_id: u64,
+                ) -> u32;
+            }
             // Hold the client to guarantee Steam is initialized before touching the raw
             // interface. The raw call sidesteps steamworks-rs' Friend::state(), whose
             // non-exhaustive match panics on k_EPersonaStateInvisible and would abort the
@@ -121,21 +131,17 @@ pub mod friends {
             let _client = crate::client::get_client();
             let state = unsafe {
                 let friends = steamworks::sys::SteamAPI_SteamFriends_v018();
-                steamworks::sys::SteamAPI_ISteamFriends_GetFriendPersonaState(
-                    friends,
-                    self.steam_id.raw(),
-                )
+                SteamAPI_ISteamFriends_GetFriendPersonaState(friends, self.steam_id.raw())
             };
-            use steamworks::sys::EPersonaState;
             match state {
-                EPersonaState::k_EPersonaStateOnline => FriendState::Online,
-                EPersonaState::k_EPersonaStateBusy => FriendState::Busy,
-                EPersonaState::k_EPersonaStateAway => FriendState::Away,
-                EPersonaState::k_EPersonaStateSnooze => FriendState::Snooze,
-                EPersonaState::k_EPersonaStateLookingToTrade => FriendState::LookingToTrade,
-                EPersonaState::k_EPersonaStateLookingToPlay => FriendState::LookingToPlay,
-                EPersonaState::k_EPersonaStateInvisible => FriendState::Invisible,
-                // Offline, plus any state added by a future SDK.
+                1 => FriendState::Online,
+                2 => FriendState::Busy,
+                3 => FriendState::Away,
+                4 => FriendState::Snooze,
+                5 => FriendState::LookingToTrade,
+                6 => FriendState::LookingToPlay,
+                7 => FriendState::Invisible,
+                // 0 = Offline, plus any state added by a future Steam client.
                 _ => FriendState::Offline,
             }
         }

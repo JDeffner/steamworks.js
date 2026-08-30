@@ -35,7 +35,7 @@ export declare namespace auth {
    */
   export function getSessionTicketWithSteamId(steamId64: bigint, timeoutSeconds?: number | undefined | null): Promise<Ticket>
   /**
-   * @param ip - The string of IPv4 or IPv6 address. Use as NetworkIdentity of the remote system that will authenticate the ticket.
+   * @param ip - The IPv4 or IPv6 socket address string, including the port (e.g. "203.0.113.10:27015" or "[::1]:27015"). Use as NetworkIdentity of the remote system that will authenticate the ticket.
    * @param timeoutSeconds - The number of seconds to wait for the ticket to be validated. Default value is 10 seconds.
    */
   export function getSessionTicketWithIp(ip: string, timeoutSeconds?: number | undefined | null): Promise<Ticket>
