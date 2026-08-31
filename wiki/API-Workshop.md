@@ -114,6 +114,7 @@ interface UgcUpdate {
     contentPath?: string
     tags?: Array<string>
     visibility?: UgcItemVisibility
+    language?: string
     metadata?: string
     keyValueTags?: Array<KeyValueTag>
     removeKeyValueTags?: Array<string>
@@ -133,6 +134,7 @@ interface UgcUpdate {
 | `contentPath` | **Absolute** path to the *folder* holding the item's content |
 | `tags` | Replaces the item's whole tag list |
 | `visibility` | `UgcItemVisibility` |
+| `language` | Steam API language code the `title`/`description` in *this* update are written in; defaults to `english` |
 | `metadata` | Developer-defined metadata, up to 5000 bytes, never shown to users |
 | `keyValueTags` | Key/value tags to add |
 | `removeKeyValueTags` | Keys to remove |
@@ -155,6 +157,26 @@ const enum UgcItemVisibility {
 ```
 
 An item created with `createItem` is not visible in the workshop until an update has been submitted for it, so set `visibility` explicitly on the first update that uploads content. Setting it to `Private` or `Unlisted` later is the non-destructive alternative to [`deleteItem`](#deleteitem).
+
+#### Language
+
+```ts
+language?: string
+```
+
+A workshop item can carry a title and description per language. `language` says which one *this* update writes, as a Steam API language code (`english`, `german`, `schinese`, …). Omit it and Steam writes the default-language text, so an update meant as a translation would overwrite the original.
+
+```ts
+await client.workshop.updateItem(itemId, {
+    language: 'german',
+    title: 'Mein Mod',
+    description: 'Eine deutsche Beschreibung.'
+})
+```
+
+Only `title` and `description` are per-language; tags, visibility, and content are shared by every language. Read a localized title back with `language` on [`WorkshopItemQueryConfig`](#workshopitemqueryconfig).
+
+[`SetItemUpdateLanguage`](https://partner.steamgames.com/doc/api/ISteamUGC#SetItemUpdateLanguage)
 
 #### Metadata
 

@@ -688,6 +688,14 @@ export declare namespace workshop {
     tags?: Array<string>
     visibility?: UgcItemVisibility
     /**
+     * Language of the title and description in THIS update, as a Steam API
+     * language code ("german", "schinese", ...). Defaults to "english": an
+     * update without it writes the default-language text.
+     *
+     * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemUpdateLanguage}
+     */
+    language?: string
+    /**
      * Developer-defined metadata for the item, not shown to users. Up to 5000 bytes.
      *
      * {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemMetadata}

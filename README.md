@@ -19,7 +19,7 @@ The API is a **superset of upstream** — install it under the original name and
 npm i steamworks.js@npm:@jdeffner/steamworks.js
 ```
 
-On top of everything in upstream `main`, the fork adds the Steamworks SDK upgrade via steamworks-rs v0.12.1, workshop `fileType`/permanent deletion/`returnChildren`/key-value tags/metadata/content descriptors, cloud save conflict resolution (`isFilePersisted`, `fileTimestamp`), leaderboards, the friends list with avatars, lobby list filters, and controller input glyphs. Each ported change keeps its original author in the git history; if upstream wakes up, all of it is offered back as pull requests.
+On top of everything in upstream `main`, the fork adds the Steamworks SDK upgrade via steamworks-rs v0.13.1, workshop `fileType`/permanent deletion/`returnChildren`/key-value tags/metadata/content descriptors/per-language updates, cloud save conflict resolution (`isFilePersisted`, `fileTimestamp`), leaderboards, the friends list with avatars, lobby list filters, and controller input glyphs. Each ported change keeps its original author in the git history; if upstream wakes up, all of it is offered back as pull requests.
 
 ## Usage
 

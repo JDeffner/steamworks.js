@@ -108,6 +108,12 @@ pub mod workshop {
         pub content_path: Option<String>,
         pub tags: Option<Vec<String>>,
         pub visibility: Option<UgcItemVisibility>,
+        /// Language of the title and description in THIS update, as a Steam API
+        /// language code ("german", "schinese", ...). Defaults to "english": an
+        /// update without it writes the default-language text.
+        ///
+        /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemUpdateLanguage}
+        pub language: Option<String>,
         /// Developer-defined metadata for the item, not shown to users. Up to 5000 bytes.
         ///
         /// {@link https://partner.steamgames.com/doc/api/ISteamUGC#SetItemMetadata}
@@ -170,6 +176,10 @@ pub mod workshop {
 
             if let Some(visibility) = self.visibility {
                 update = update.visibility(visibility.into());
+            }
+
+            if let Some(language) = self.language {
+                update = update.language(language.as_str());
             }
 
             if let Some(metadata) = self.metadata {
